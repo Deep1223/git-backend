@@ -13,6 +13,12 @@ const countryMasterSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
+    /** ISO 4217 currency code for storefront pricing (e.g. INR, USD). */
+    currencycode: {
+        type: String,
+        trim: true,
+        default: '',
+    },
     status: {
         type: Number,
         default: 1
