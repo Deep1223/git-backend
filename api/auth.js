@@ -299,7 +299,7 @@ exports.googleLogin = async (req, res) => {
             audience: process.env.GOOGLE_CLIENT_ID
         });
 
-        const { sub: googleid, email, name: username } = ticket.getPayload();
+        const { sub: googleid, email, name: username, given_name: firstname, family_name: lastname } = ticket.getPayload();
 
         // Check if user exists
         let user = await User.findOne({ email });
@@ -316,7 +316,9 @@ exports.googleLogin = async (req, res) => {
                 googleid,
                 email,
                 username: username || email.split('@')[0], // Use name or email prefix
-                status: 'Active',
+                firstname: firstname || username || email.split('@')[0],
+                lastname: lastname || '',
+                status: 1, // Use number instead of string
                 recordinfo: {
                     createby: username || email.split('@')[0]
                 }

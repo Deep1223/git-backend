@@ -99,6 +99,8 @@ const userSchema = new mongoose.Schema({
         },
         validate: {
             validator: function (v) {
+                // Only validate if password is being set/modified
+                if (!this.isModified('password')) return true;
                 // If googleid is present, password is not required
                 if (this.googleid) return true;
                 // Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
