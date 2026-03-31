@@ -168,6 +168,23 @@ function normalizeBody(body) {
         });
     }
 
+    if (!Array.isArray(b.heroSlides)) b.heroSlides = [];
+    b.heroSlides = b.heroSlides.map((row) => {
+        const r = row && typeof row === 'object' ? { ...row } : {};
+        return {
+            image: r.image != null ? String(r.image).trim() : '',
+            title: r.title != null ? String(r.title).trim() : '',
+            subtitle: r.subtitle != null ? String(r.subtitle).trim() : '',
+            caption: r.caption != null ? String(r.caption).trim() : '',
+            cta: r.cta != null ? String(r.cta).trim() : '',
+            href: r.href != null ? String(r.href).trim() : '',
+        };
+    });
+
+    if (b.storefrontContentJson !== undefined && b.storefrontContentJson !== null) {
+        b.storefrontContentJson = String(b.storefrontContentJson);
+    }
+
     URL_TRIM_FIELDS.forEach((k) => {
         if (b[k] !== undefined && b[k] !== null) {
             b[k] = String(b[k]).trim();

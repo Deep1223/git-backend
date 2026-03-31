@@ -56,6 +56,13 @@ const productMasterSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    /** Units available to sell (dashboard: “Available qty”). Synced with instock on save. */
+    availableQty: {
+        type: Number,
+        default: 1,
+        min: 0,
+    },
+    /** 1 = purchasable flag; kept for filters; derived from availableQty in API when saving. */
     instock: {
         type: Number,
         default: 1
@@ -102,6 +109,16 @@ const productMasterSchema = new mongoose.Schema({
 });
 
 productMasterSchema.pre('save', async function () {
+    if (this.isNew || this.isModified('availableQty')) {
+        let q = Number(this.availableQty);
+        if (!Number.isFinite(q)) {
+            q = this.isNew ? 1 : 0;
+        }
+        q = Math.max(0, Math.floor(q));
+        this.availableQty = q;
+        this.instock = q > 0 ? 1 : 0;
+    }
+
     if (this.isNew) {
         if (!this.recordinfo) this.recordinfo = {};
         this.recordinfo.updateat = undefined;

@@ -11,6 +11,7 @@ const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const router = require('./router');
 const errorHandler = require('./middleware/error');
+const { startEcomJobs } = require('./jobs/ecom');
 
 // Load env vars
 dotenv.config();
@@ -99,6 +100,7 @@ const connectDB = async () => {
 };
 
 connectDB();
+startEcomJobs();
 
 const PORT = process.env.PORT || 5000;
 

@@ -20,7 +20,16 @@ function normalizeProductBody(body) {
         b.originalPrice = Number(b.originalPrice);
     }
     if (b.status !== undefined && b.status !== null && b.status !== '') b.status = Number(b.status);
-    if (b.instock !== undefined && b.instock !== null && b.instock !== '') b.instock = Number(b.instock);
+    if (b.availableQty !== undefined && b.availableQty !== null && b.availableQty !== '') {
+        const q = Math.floor(Number(b.availableQty));
+        b.availableQty = Number.isFinite(q) ? Math.max(0, q) : 0;
+        b.instock = b.availableQty > 0 ? 1 : 0;
+    } else if (b.instock !== undefined && b.instock !== null && b.instock !== '') {
+        b.instock = Number(b.instock) > 0 ? 1 : 0;
+        if (b.availableQty === undefined) {
+            b.availableQty = b.instock ? 1 : 0;
+        }
+    }
 
     if (b.images !== undefined) {
         b.images = Array.isArray(b.images) ? b.images.filter((u) => u != null && String(u).trim() !== '') : [];

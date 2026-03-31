@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const ecomRouter = require('./routes/ecom');
 
 // Controllers
 const {getAllCategories, getCategoryById, createCategory, updateCategory, deleteCategory} = require('./api/categorymaster');
@@ -27,6 +28,7 @@ const {
     updateGeneralSetting,
     deleteGeneralSetting,
 } = require('./api/generalsetting');
+const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
 const {signup, login, logout, googleLogin, forgotPassword, resetPassword, getMe, setup2FA, verify2FA, toggle2FA} = require('./api/auth');
 const { protect } = require('./middleware/auth');
@@ -156,6 +158,9 @@ router.route('/generalsetting/update').post(protect, audit('UPDATE', 'GeneralSet
 router.route('/generalsetting/delete').post(protect, audit('DELETE', 'GeneralSetting'), deleteGeneralSetting);
 router.route('/generalsetting/:id').get(protect, getGeneralSettingById);
 
+// Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
+registerStorefrontHomeMasters(router, { protect, audit });
+
 // Config Route
 router.get('/config', getConfig); // Public access for app config
 router.post('/config', getConfig); // Support POST for email/password authentication
@@ -166,5 +171,8 @@ router.post('/public/subcategories', postPublicSubcategories);
 router.post('/public/products', postPublicProducts);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
+
+// New e-commerce REST APIs (auth/products/cart/orders/storefront/recommendations)
+router.use('/ecom', ecomRouter);
 
 module.exports = router;

@@ -13,6 +13,18 @@ const shopFooterLinkSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const heroSlideSchema = new mongoose.Schema(
+    {
+        image: { type: String, trim: true, default: '' },
+        title: { type: String, trim: true, default: '' },
+        subtitle: { type: String, trim: true, default: '' },
+        caption: { type: String, trim: true, default: '' },
+        cta: { type: String, trim: true, default: '' },
+        href: { type: String, trim: true, default: '' },
+    },
+    { _id: false }
+);
+
 const generalSettingSchema = new mongoose.Schema({
     storeName: { type: String, trim: true, default: 'ORINKET' },
     storeDescription: { type: String, trim: true, default: '' },
@@ -84,6 +96,14 @@ const generalSettingSchema = new mongoose.Schema({
 
     seoHomepageTitle: { type: String, trim: true, default: '' },
     seoHomepageMetaDescription: { type: String, trim: true, default: '' },
+
+    /** Homepage hero — Dashboard → Storefront homepage (or legacy API field) */
+    heroSlides: { type: [heroSlideSchema], default: [] },
+    /**
+     * Optional JSON for extra homepage & policy copy (see dashboard field help text).
+     * Example top-level keys: demifineSection, topStylesSection, supportPages, termsPage, privacyPage, …
+     */
+    storefrontContentJson: { type: String, default: '' },
 
     recordinfo: {
         createat: { type: Date, default: Date.now },
