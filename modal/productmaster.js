@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { allocateNextProductSeriesCode } = require('../lib/productSeriesAllocator');
 
 const productDetailRowSchema = new mongoose.Schema(
     {
@@ -13,6 +14,13 @@ const productMasterSchema = new mongoose.Schema({
         required: [true, 'Product name is required'],
         unique: true,
         trim: true
+    },
+    /** Auto-generated from Series Master (Product Master menu); immutable after create */
+    productseries: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true,
     },
     price: {
         type: Number,
@@ -48,6 +56,13 @@ const productMasterSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    /** Units available to sell (dashboard: “Available qty”). Synced with instock on save. */
+    availableQty: {
+        type: Number,
+        default: 1,
+        min: 0,
+    },
+    /** 1 = purchasable flag; kept for filters; derived from availableQty in API when saving. */
     instock: {
         type: Number,
         default: 1
@@ -93,13 +108,34 @@ const productMasterSchema = new mongoose.Schema({
     }
 });
 
-productMasterSchema.pre('save', function () {
+productMasterSchema.pre('save', async function () {
+    if (this.isNew || this.isModified('availableQty')) {
+        let q = Number(this.availableQty);
+        if (!Number.isFinite(q)) {
+            q = this.isNew ? 1 : 0;
+        }
+        q = Math.max(0, Math.floor(q));
+        this.availableQty = q;
+        this.instock = q > 0 ? 1 : 0;
+    }
+
     if (this.isNew) {
         if (!this.recordinfo) this.recordinfo = {};
         this.recordinfo.updateat = undefined;
         this.recordinfo.updateby = undefined;
-    } else if (this.recordinfo) {
-        this.recordinfo.updateat = Date.now();
+        if (!this.productseries || !String(this.productseries).trim()) {
+            this.productseries = await allocateNextProductSeriesCode();
+        }
+    } else {
+        if (this.isModified('productseries')) {
+            const existing = await this.constructor.findById(this._id).select('productseries').lean();
+            if (existing?.productseries) {
+                this.productseries = existing.productseries;
+            }
+        }
+        if (this.recordinfo) {
+            this.recordinfo.updateat = Date.now();
+        }
     }
 });
 

@@ -1,6 +1,17 @@
 const ProductMaster = require('../modal/productmaster');
+const { getPreviewNextProductSeriesCode } = require('../lib/productSeriesAllocator');
 
-const STRING_SORT_DB_FIELDS = ['productname', 'category', 'subcategory', 'description', 'material', 'plating', 'dimensions', 'weight'];
+const STRING_SORT_DB_FIELDS = [
+    'productname',
+    'productseries',
+    'category',
+    'subcategory',
+    'description',
+    'material',
+    'plating',
+    'dimensions',
+    'weight',
+];
 
 function normalizeProductBody(body) {
     const b = body && typeof body === 'object' ? { ...body } : {};
@@ -9,7 +20,16 @@ function normalizeProductBody(body) {
         b.originalPrice = Number(b.originalPrice);
     }
     if (b.status !== undefined && b.status !== null && b.status !== '') b.status = Number(b.status);
-    if (b.instock !== undefined && b.instock !== null && b.instock !== '') b.instock = Number(b.instock);
+    if (b.availableQty !== undefined && b.availableQty !== null && b.availableQty !== '') {
+        const q = Math.floor(Number(b.availableQty));
+        b.availableQty = Number.isFinite(q) ? Math.max(0, q) : 0;
+        b.instock = b.availableQty > 0 ? 1 : 0;
+    } else if (b.instock !== undefined && b.instock !== null && b.instock !== '') {
+        b.instock = Number(b.instock) > 0 ? 1 : 0;
+        if (b.availableQty === undefined) {
+            b.availableQty = b.instock ? 1 : 0;
+        }
+    }
 
     if (b.images !== undefined) {
         b.images = Array.isArray(b.images) ? b.images.filter((u) => u != null && String(u).trim() !== '') : [];
@@ -79,6 +99,7 @@ exports.getAllProducts = async (req, res) => {
         if (searchtext) {
             filter.$or = [
                 { productname: { $regex: searchtext, $options: 'i' } },
+                { productseries: { $regex: searchtext, $options: 'i' } },
                 { category: { $regex: searchtext, $options: 'i' } },
                 { subcategory: { $regex: searchtext, $options: 'i' } },
                 { description: { $regex: searchtext, $options: 'i' } },
@@ -170,6 +191,30 @@ exports.getAllProducts = async (req, res) => {
     }
 };
 
+/** Next series code for UI (does not reserve / increment). */
+exports.previewNextProductSeries = async (req, res) => {
+    try {
+        const code = await getPreviewNextProductSeriesCode();
+        if (!code) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    'No Series Master for Product Master. Add one in Series Master with Menu = Product Master.',
+            });
+        }
+        res.status(200).json({
+            success: true,
+            data: { productseries: code },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Server Error',
+            error: error.message,
+        });
+    }
+};
+
 exports.getProductById = async (req, res) => {
     try {
         const product = await ProductMaster.findById(req.params.id);
@@ -194,6 +239,7 @@ exports.getProductById = async (req, res) => {
 
 exports.createProduct = async (req, res) => {
     try {
+        delete req.body.productseries;
         Object.assign(req.body, normalizeProductBody(req.body));
 
         req.body.recordinfo = {
@@ -231,6 +277,7 @@ exports.updateProduct = async (req, res) => {
             });
         }
 
+        delete req.body.productseries;
         Object.assign(req.body, normalizeProductBody(req.body));
 
         if (!req.body.recordinfo) req.body.recordinfo = {};
@@ -276,6 +323,7 @@ exports.deleteProduct = async (req, res) => {
                 if (searchtext) {
                     filter.$or = [
                         { productname: { $regex: searchtext, $options: 'i' } },
+                        { productseries: { $regex: searchtext, $options: 'i' } },
                         { category: { $regex: searchtext, $options: 'i' } }
                     ];
                 }

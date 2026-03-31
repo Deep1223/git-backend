@@ -10,7 +10,9 @@ exports.getAllCountries = async (req, res) => {
         // Handle Search Filter
         if (searchtext) {
             filter.$or = [
-                { countryname: { $regex: searchtext, $options: 'i' } }
+                { countryname: { $regex: searchtext, $options: 'i' } },
+                { countrycode: { $regex: searchtext, $options: 'i' } },
+                { currencycode: { $regex: searchtext, $options: 'i' } },
             ];
         }
 

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const ecomRouter = require('./routes/ecom');
 
 // Controllers
 const {getAllCategories, getCategoryById, createCategory, updateCategory, deleteCategory} = require('./api/categorymaster');
@@ -11,8 +12,23 @@ const {getAllStates, getStateById, createState, updateState, deleteState} = requ
 const {getAllIcons, getIconById, createIcon, updateIcon, deleteIcon} = require('./api/iconmaster');
 const { getAllModules, getModuleById, createModule, updateModule, deleteModule} = require('./api/modulemaster');
 const { getAllMenuAssignments, getMenuAssignmentById, createMenuAssignment, updateMenuAssignment, deleteMenuAssignment } = require('./api/menuassignmaster');
-const { getAllProducts, getProductById, createProduct, updateProduct, deleteProduct } = require('./api/productmaster');
+const {
+    getAllProducts,
+    getProductById,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    previewNextProductSeries,
+} = require('./api/productmaster');
 const { getAllSubCategories, getSubCategoryById, createSubCategory, updateSubCategory, deleteSubCategory } = require('./api/subcategorymaster');
+const {
+    getAllGeneralSettings,
+    getGeneralSettingById,
+    createGeneralSetting,
+    updateGeneralSetting,
+    deleteGeneralSetting,
+} = require('./api/generalsetting');
+const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
 const {signup, login, logout, googleLogin, forgotPassword, resetPassword, getMe, setup2FA, verify2FA, toggle2FA} = require('./api/auth');
 const { protect } = require('./middleware/auth');
@@ -22,6 +38,13 @@ const audit = require('./middleware/audit');
 const {getAllUsers, getUserById, createUser, updateUser, deleteUser} = require('./api/usermaster');
 const { getConfig } = require('./api/config');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
+const {
+    postPublicCategories,
+    postPublicSubcategories,
+    postPublicProducts,
+    postPublicTopStyles,
+    postPublicStoreSettings,
+} = require('./publicapis');
 
 // Auth Routes
 router.route('/auth/signup').post(signup);
@@ -115,6 +138,7 @@ router.route('/menuassignmaster/:id').get(protect, getMenuAssignmentById);
 
 // Product Master Routes
 router.route('/productmaster').post(protect, getAllProducts).get(protect, getAllProducts);
+router.route('/productmaster/preview-next-series').get(protect, previewNextProductSeries);
 router.route('/productmaster/create').post(protect, audit('CREATE', 'Product'), createProduct);
 router.route('/productmaster/update').post(protect, audit('UPDATE', 'Product'), updateProduct);
 router.route('/productmaster/delete').post(protect, audit('DELETE', 'Product'), deleteProduct);
@@ -127,8 +151,28 @@ router.route('/subcategorymaster/update').post(protect, audit('UPDATE', 'SubCate
 router.route('/subcategorymaster/delete').post(protect, audit('DELETE', 'SubCategory'), deleteSubCategory);
 router.route('/subcategorymaster/:id').get(protect, getSubCategoryById);
 
+// General Settings (store configuration)
+router.route('/generalsetting').post(protect, getAllGeneralSettings).get(protect, getAllGeneralSettings);
+router.route('/generalsetting/create').post(protect, audit('CREATE', 'GeneralSetting'), createGeneralSetting);
+router.route('/generalsetting/update').post(protect, audit('UPDATE', 'GeneralSetting'), updateGeneralSetting);
+router.route('/generalsetting/delete').post(protect, audit('DELETE', 'GeneralSetting'), deleteGeneralSetting);
+router.route('/generalsetting/:id').get(protect, getGeneralSettingById);
+
+// Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
+registerStorefrontHomeMasters(router, { protect, audit });
+
 // Config Route
 router.get('/config', getConfig); // Public access for app config
 router.post('/config', getConfig); // Support POST for email/password authentication
+
+// Storefront public listings (read-only, no auth) — POST body = dashboard-style listing
+router.post('/public/categories', postPublicCategories);
+router.post('/public/subcategories', postPublicSubcategories);
+router.post('/public/products', postPublicProducts);
+router.post('/public/top-styles', postPublicTopStyles);
+router.post('/public/store-settings', postPublicStoreSettings);
+
+// New e-commerce REST APIs (auth/products/cart/orders/storefront/recommendations)
+router.use('/ecom', ecomRouter);
 
 module.exports = router;

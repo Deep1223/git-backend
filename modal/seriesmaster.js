@@ -11,6 +11,11 @@ const seriesMasterSchema = new mongoose.Schema({
         required: [true, 'Menu name is required'],
         trim: true
     },
+    /** Legacy / admin display name; some DBs have a unique index on this field */
+    seriesname: {
+        type: String,
+        trim: true,
+    },
     seriescode: {
         type: String,
         required: [true, 'Series code is required'],

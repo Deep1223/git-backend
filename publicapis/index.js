@@ -1,0 +1,17 @@
+/**
+ * Public HTTP handlers for the storefront (no auth).
+ * Listing endpoints mirror dashboard POST bodies: paginationinfo + searchtext.
+ */
+const { postPublicCategories } = require('./catalogCategories');
+const { postPublicSubcategories } = require('./catalogSubcategories');
+const { postPublicProducts } = require('./catalogProducts');
+const { postPublicTopStyles } = require('./topStyles');
+const { postPublicStoreSettings } = require('./storeSettings');
+
+module.exports = {
+    postPublicCategories,
+    postPublicSubcategories,
+    postPublicProducts,
+    postPublicTopStyles,
+    postPublicStoreSettings,
+};
