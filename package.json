@@ -11,7 +11,8 @@
     "seed:ecom": "node scripts/seed.js",
     "seed:storefront-home": "node scripts/seed-storefront-home-masters.js",
     "reset:ecom": "node scripts/seed.js",
-    "smoke:ecom": "node scripts/smoke-ecom.js"
+    "smoke:ecom": "node scripts/smoke-ecom.js",
+    "seed:cms-support": "node scripts/seed-cms-support.js"
   },
   "keywords": [],
   "author": "",

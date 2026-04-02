@@ -18,9 +18,21 @@ dotenv.config();
 
 const app = express();
 
-// Enable CORS at the very top
+// Enable CORS at the very top (comma-separated FRONTEND_URL; default covers common CRA ports)
+const defaultDevOrigins = 'http://localhost:3000,http://localhost:3001,http://localhost:4000';
+const allowedOrigins = (process.env.FRONTEND_URL || defaultDevOrigins)
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin(origin, callback) {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(null, false);
+        }
+    },
     credentials: true,
     optionsSuccessStatus: 200
 };
@@ -42,9 +54,9 @@ if (process.env.NODE_ENV === 'development') {
     app.use(morgan('combined'));
 }
 
-// Body parser with limit
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// Body parser — 10kb was too small for general settings (banners, SEO, JSON blocks).
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: process.env.JSON_BODY_LIMIT || '1mb' }));
 
 // Cookie parser
 app.use(cookieParser());

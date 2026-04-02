@@ -44,7 +44,40 @@ const {
     postPublicProducts,
     postPublicTopStyles,
     postPublicStoreSettings,
+    postPublicCmsContact,
+    postPublicCmsFaq,
+    postPublicCmsShipping,
+    postPublicCmsReturns,
 } = require('./publicapis');
+
+const {
+    getAllCmsContact,
+    getCmsContactById,
+    createCmsContact,
+    updateCmsContact,
+    deleteCmsContact,
+} = require('./api/cmsContact');
+const {
+    getAllCmsFaq,
+    getCmsFaqById,
+    createCmsFaq,
+    updateCmsFaq,
+    deleteCmsFaq,
+} = require('./api/cmsFaq');
+const {
+    getAllCmsShipping,
+    getCmsShippingById,
+    createCmsShipping,
+    updateCmsShipping,
+    deleteCmsShipping,
+} = require('./api/cmsShipping');
+const {
+    getAllCmsReturns,
+    getCmsReturnsById,
+    createCmsReturns,
+    updateCmsReturns,
+    deleteCmsReturns,
+} = require('./api/cmsReturns');
 
 // Auth Routes
 router.route('/auth/signup').post(signup);
@@ -171,6 +204,35 @@ router.post('/public/subcategories', postPublicSubcategories);
 router.post('/public/products', postPublicProducts);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
+router.post('/public/cms-contact', postPublicCmsContact);
+router.post('/public/cms-faq', postPublicCmsFaq);
+router.post('/public/cms-shipping', postPublicCmsShipping);
+router.post('/public/cms-returns', postPublicCmsReturns);
+
+// CMS support pages (dashboard)
+router.route('/cmscontact').post(protect, getAllCmsContact).get(protect, getAllCmsContact);
+router.route('/cmscontact/create').post(protect, audit('CREATE', 'CmsContact'), createCmsContact);
+router.route('/cmscontact/update').post(protect, audit('UPDATE', 'CmsContact'), updateCmsContact);
+router.route('/cmscontact/delete').post(protect, audit('DELETE', 'CmsContact'), deleteCmsContact);
+router.route('/cmscontact/:id').get(protect, getCmsContactById);
+
+router.route('/cmsfaq').post(protect, getAllCmsFaq).get(protect, getAllCmsFaq);
+router.route('/cmsfaq/create').post(protect, audit('CREATE', 'CmsFaq'), createCmsFaq);
+router.route('/cmsfaq/update').post(protect, audit('UPDATE', 'CmsFaq'), updateCmsFaq);
+router.route('/cmsfaq/delete').post(protect, audit('DELETE', 'CmsFaq'), deleteCmsFaq);
+router.route('/cmsfaq/:id').get(protect, getCmsFaqById);
+
+router.route('/cmsshipping').post(protect, getAllCmsShipping).get(protect, getAllCmsShipping);
+router.route('/cmsshipping/create').post(protect, audit('CREATE', 'CmsShipping'), createCmsShipping);
+router.route('/cmsshipping/update').post(protect, audit('UPDATE', 'CmsShipping'), updateCmsShipping);
+router.route('/cmsshipping/delete').post(protect, audit('DELETE', 'CmsShipping'), deleteCmsShipping);
+router.route('/cmsshipping/:id').get(protect, getCmsShippingById);
+
+router.route('/cmsreturns').post(protect, getAllCmsReturns).get(protect, getAllCmsReturns);
+router.route('/cmsreturns/create').post(protect, audit('CREATE', 'CmsReturns'), createCmsReturns);
+router.route('/cmsreturns/update').post(protect, audit('UPDATE', 'CmsReturns'), updateCmsReturns);
+router.route('/cmsreturns/delete').post(protect, audit('DELETE', 'CmsReturns'), deleteCmsReturns);
+router.route('/cmsreturns/:id').get(protect, getCmsReturnsById);
 
 // New e-commerce REST APIs (auth/products/cart/orders/storefront/recommendations)
 router.use('/ecom', ecomRouter);
