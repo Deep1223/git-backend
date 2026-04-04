@@ -97,6 +97,11 @@ const productMasterSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    gender: {
+        type: String,
+        enum: ['Man', 'Woman', 'Both'],
+        default: 'Both'
+    },
     details: {
         type: String,
         trim: true,

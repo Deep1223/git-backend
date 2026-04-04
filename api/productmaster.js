@@ -16,6 +16,7 @@ const STRING_SORT_DB_FIELDS = [
     'plating',
     'dimensions',
     'weight',
+    'gender',
 ];
 
 function normalizeProductBody(body) {

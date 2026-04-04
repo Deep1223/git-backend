@@ -173,6 +173,14 @@ exports.updateCategory = async (req, res) => {
             });
         }
 
+        // Prevent updating default categories
+        if (category.defaultdata === true) {
+            return res.status(403).json({
+                success: false,
+                message: 'Default categories cannot be updated'
+            });
+        }
+
         // Update recordinfo.updateby
         if (!req.body.recordinfo) req.body.recordinfo = {};
         req.body.recordinfo.updateby = req.user ? req.user.username : 'system';
@@ -249,6 +257,18 @@ exports.deleteCategory = async (req, res) => {
 
         // Handle legacy single string ID or array of IDs
         const idsToDelete = Array.isArray(idData) ? idData : [idData];
+        
+        // If single ID, check if it's default
+        if (idsToDelete.length === 1) {
+            const cat = await CategoryMaster.findById(idsToDelete[0]);
+            if (cat?.defaultdata === true) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Default categories cannot be deleted'
+                });
+            }
+        }
+
         await CategoryMaster.deleteMany({ 
             _id: { $in: idsToDelete },
             defaultdata: { $ne: true }

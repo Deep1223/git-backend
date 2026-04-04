@@ -1,7 +1,7 @@
 const EcomProduct = require('../../modal/ecomProduct');
 
 /** Populate `productMasterId` with these fields wherever products are returned to the storefront. */
-const PRODUCT_MASTER_PUBLIC_SELECT = 'productseries productname price originalPrice images availableQty';
+const PRODUCT_MASTER_PUBLIC_SELECT = 'productseries productname price originalPrice images availableQty gender';
 
 function getSessionId(req) {
     const fromHeader = req.headers['x-session-id'];
@@ -53,6 +53,7 @@ function mapProductPublic(product) {
         image: images[0] || '',
         images,
         stock,
+        gender: pm?.gender || 'Both',
         tags: product.tags || [],
         inStock: stock > 0,
         isLowStock: Boolean(product.isLowStock),

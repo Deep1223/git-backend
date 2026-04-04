@@ -15,6 +15,10 @@ const categoryMasterSchema = new mongoose.Schema({
         type: Number,
         default: 1
     },
+    defaultdata: {
+        type: Boolean,
+        default: false
+    },
     recordinfo: {
         createat: { type: Date, default: Date.now },
         createby: { type: String },

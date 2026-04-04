@@ -36,8 +36,8 @@ function getDefaultStorefrontHomeContent() {
         shopByRecipient: {
             title: 'SHOP BY RECIPIENT',
             recipients: [
-                { title: 'Gifts For Her', image: img.bag, href: '/gifts/for-her' },
-                { title: 'Gifts For Him', image: img.shoes, href: '/gifts/for-him' },
+                { title: 'Gifts For Her', image: img.bag, href: '/promo?recipient=her' },
+                { title: 'Gifts For Him', image: img.shoes, href: '/promo?recipient=him' },
             ],
         },
         forEveryYou: {
