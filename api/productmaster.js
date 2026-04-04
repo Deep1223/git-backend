@@ -1,5 +1,10 @@
 const ProductMaster = require('../modal/productmaster');
+const CategoryMaster = require('../modal/categorymaster');
+const { slugifyLabel } = require('../lib/slugifyLabel');
 const { getPreviewNextProductSeriesCode } = require('../lib/productSeriesAllocator');
+const { syncLinkedCatalogFromProductMaster } = require('../lib/catalogProductMasterSync');
+const { notifyAllAdmins, initialsFrom } = require('../lib/adminNotify');
+const { getLowStockThreshold } = require('../modal/storeInventorySettings');
 
 const STRING_SORT_DB_FIELDS = [
     'productname',
@@ -18,6 +23,20 @@ function normalizeProductBody(body) {
     if (b.price !== undefined && b.price !== '' && b.price !== null) b.price = Number(b.price);
     if (b.originalPrice !== undefined && b.originalPrice !== '' && b.originalPrice !== null) {
         b.originalPrice = Number(b.originalPrice);
+    }
+    if (b.buyOneGetOneFree !== undefined && b.buyOneGetOneFree !== null && b.buyOneGetOneFree !== '') {
+        const v = b.buyOneGetOneFree;
+        b.buyOneGetOneFree =
+            v === true ||
+            v === 1 ||
+            v === '1' ||
+            String(v).toLowerCase() === 'true';
+    }
+
+    if (b.storefrontHomeSectionKeys !== undefined) {
+        b.storefrontHomeSectionKeys = Array.isArray(b.storefrontHomeSectionKeys)
+            ? [...new Set(b.storefrontHomeSectionKeys.map((x) => String(x ?? '').trim()).filter(Boolean))]
+            : [];
     }
     if (b.status !== undefined && b.status !== null && b.status !== '') b.status = Number(b.status);
     if (b.availableQty !== undefined && b.availableQty !== null && b.availableQty !== '') {
@@ -88,11 +107,108 @@ function resolveSort(paginationinfo) {
     };
 }
 
+function isPlainObject(value) {
+    return Object.prototype.toString.call(value) === '[object Object]';
+}
+
+function normalizeStorefrontSectionKeyPredicate(raw) {
+    if (Array.isArray(raw)) {
+        const keys = [...new Set(raw.map((x) => String(x ?? '').trim()).filter(Boolean))];
+        if (keys.length === 0) return undefined;
+        if (keys.length === 1) return keys[0];
+        return { $in: keys };
+    }
+    if (isPlainObject(raw) && Array.isArray(raw.$in)) {
+        const keys = [...new Set(raw.$in.map((x) => String(x ?? '').trim()).filter(Boolean))];
+        if (keys.length === 0) return undefined;
+        if (keys.length === 1) return keys[0];
+        return { $in: keys };
+    }
+    if (raw != null) {
+        const key = String(raw).trim();
+        return key || undefined;
+    }
+    return undefined;
+}
+
+/** Recursively normalizes storefrontHomeSectionKeys clauses, including inside $and/$or trees. */
+function normalizeStorefrontSectionFilter(node) {
+    if (Array.isArray(node)) {
+        return node.map((item) => normalizeStorefrontSectionFilter(item));
+    }
+    if (!isPlainObject(node)) return node;
+
+    const out = { ...node };
+
+    if (Object.prototype.hasOwnProperty.call(out, 'storefrontHomeSectionKeys')) {
+        const normalized = normalizeStorefrontSectionKeyPredicate(out.storefrontHomeSectionKeys);
+        if (normalized === undefined) delete out.storefrontHomeSectionKeys;
+        else out.storefrontHomeSectionKeys = normalized;
+    }
+
+    for (const key of Object.keys(out)) {
+        const val = out[key];
+        if (Array.isArray(val) || isPlainObject(val)) {
+            out[key] = normalizeStorefrontSectionFilter(val);
+        }
+    }
+
+    return out;
+}
+
+async function resolveTabToCategoryFilter(tabSlug) {
+    const t = String(tabSlug || '').trim().toLowerCase();
+    if (!t || t === 'all') return null;
+
+    const cats = await CategoryMaster.find({ status: 1 }).select('_id categoryname').lean();
+    for (const c of cats) {
+        if (slugifyLabel(c.categoryname) === t) {
+            return {
+                $or: [{ categoryid: c._id }, { category: c.categoryname?.trim() }]
+            };
+        }
+    }
+
+    // Special case for men's categories
+    const aliases = [['mens', 'men'], ['men', 'mens']];
+    for (const [a, b] of aliases) {
+        if (t === a || t === b) {
+            for (const c of cats) {
+                const s = slugifyLabel(c.categoryname);
+                if (s === 'men' || s === 'mens') {
+                    return {
+                        $or: [{ categoryid: c._id }, { category: c.categoryname?.trim() }]
+                    };
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
 // Get all products (listing POST — pagination, sort, filter, search, projection)
 exports.getAllProducts = async (req, res) => {
     try {
         const { paginationinfo, searchtext } = req.body || {};
-        let filter = paginationinfo?.filter || {};
+        let filter = normalizeStorefrontSectionFilter(paginationinfo?.filter || {});
+        
+        // Convert tab slug to category filter if present
+        if (filter.tab) {
+            const catFilter = await resolveTabToCategoryFilter(filter.tab);
+            delete filter.tab;
+            if (catFilter) {
+                // Merge with existing filter
+                if (filter.$and) {
+                    filter.$and.push(catFilter);
+                } else if (Object.keys(filter).length > 0) {
+                    filter = { $and: [filter, catFilter] };
+                } else {
+                    filter = catFilter;
+                }
+            }
+        }
+
         const projection = paginationinfo?.projection || {};
         const hasProjection = Object.keys(projection).length > 0;
 
@@ -277,6 +393,9 @@ exports.updateProduct = async (req, res) => {
             });
         }
 
+        const prevQty = Number(product.availableQty ?? 0);
+        const threshold = await getLowStockThreshold();
+
         delete req.body.productseries;
         Object.assign(req.body, normalizeProductBody(req.body));
 
@@ -288,6 +407,43 @@ exports.updateProduct = async (req, res) => {
             new: true,
             runValidators: true
         });
+
+        const newQty = Number(product.availableQty ?? 0);
+        const pname = product.productname || 'Product';
+
+        if (newQty === 0 && prevQty > 0) {
+            notifyAllAdmins({
+                type: 'out_of_stock',
+                boldName: pname,
+                text: `${pname} is now out of stock`,
+                name: pname,
+                body: 'Available quantity reached zero. Restock or hide the product from the storefront.',
+                boldTag: 'out of stock',
+                subDesc: 'Available qty = 0',
+                tag: 'Inventory',
+                sender: req.user?.username || 'System',
+                initials: initialsFrom(pname),
+                redirectPath: '/productmaster',
+                meta: { productId: String(product._id), productName: pname },
+            });
+        } else if (newQty > 0 && newQty <= threshold && prevQty > threshold) {
+            notifyAllAdmins({
+                type: 'low_stock',
+                boldName: pname,
+                text: `${pname} is low on stock (${newQty} left)`,
+                name: pname,
+                body: `Available quantity dropped to ${newQty} (threshold ${threshold}).`,
+                boldTag: 'low stock',
+                subDesc: `${newQty} units`,
+                tag: 'Inventory',
+                sender: req.user?.username || 'System',
+                initials: initialsFrom(pname),
+                redirectPath: '/productmaster',
+                meta: { productId: String(product._id), productName: pname, availableQty: newQty },
+            });
+        }
+
+        await syncLinkedCatalogFromProductMaster(product);
 
         res.status(200).json({
             success: true,

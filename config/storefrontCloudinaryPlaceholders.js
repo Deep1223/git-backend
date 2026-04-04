@@ -2,17 +2,25 @@
  * Stable Cloudinary **demo** delivery URLs (`res.cloudinary.com/demo`, image `sample`).
  * Different `w`/`h`/`c`/`q` transforms = distinct URLs, all valid without your own uploads.
  *
- * Swap to your folder: `https://res.cloudinary.com/<CLOUDINARY_CLOUD_NAME>/image/upload/v.../orinket/...`
+ * Hero banners use **curated stock** (Unsplash, jewellery) — not `sample`, which is always the same flower.
+ * Production: put assets on your Cloudinary and swap URLs, e.g.
+ *   `https://res.cloudinary.com/<CLOUD_NAME>/image/upload/v.../orinket/hero-1.jpg`
  */
 function demo(transform) {
     return `https://res.cloudinary.com/demo/image/upload/${transform}/sample`;
 }
 
+/** Unsplash — jewellery / luxury (Unsplash License). Replace with your Cloudinary uploads when ready. */
+const heroJewelry = (photoId) =>
+    `https://images.unsplash.com/${photoId}?auto=format&w=1920&h=640&fit=crop&q=85`;
+
 module.exports = {
-    /** Hero carousel (Storefront homepage master / general settings) */
-    hero1: demo('w_1920,h_640,c_fill,q_auto,f_auto'),
-    hero2: demo('w_1920,h_640,c_fill,q_88'),
-    hero3: demo('w_1920,h_640,c_fill,q_92'),
+    /** Hero carousel — rings / hands */
+    hero1: heroJewelry('photo-1515562141207-7a88fb7ce338'),
+    /** Hero carousel — gold pieces flatlay */
+    hero2: heroJewelry('photo-1611652022419-a9419f74343d'),
+    /** Hero carousel — necklace / editorial */
+    hero3: heroJewelry('photo-1599643478518-a784e5dc4c8f'),
     wideSale: demo('w_1600,h_520,c_fill,q_auto,f_auto'),
     brandWide: demo('w_1600,h_700,c_fill,q_auto'),
     deserve: demo('w_1200,h_800,c_fill,q_auto'),

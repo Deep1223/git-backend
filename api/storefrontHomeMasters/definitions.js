@@ -8,36 +8,24 @@ const DEFS = {
             title: toStr(section.title),
             description: toStr(section.description),
             ctaText: toStr(section?.cta?.text),
-            ctaHref: toStr(section?.cta?.href),
+            ctaHref: '/promo?section=demiFineJewelleryProducts',
         }),
         write: (body) => ({
             subtitle: toStr(body.subtitle),
             title: toStr(body.title),
             description: toStr(body.description),
-            cta: { text: toStr(body.ctaText), href: toStr(body.ctaHref) },
-        }),
-    },
-    storefronttopstylesmaster: {
-        cmsKey: 'topStylesSection',
-        read: (section = {}) => ({
-            title: toStr(section.title),
-            categories: Array.isArray(section.categories) ? section.categories.join('\n') : '',
-            discount: toNum(section.discount, 0),
-            categoryid: section.categoryid != null ? String(section.categoryid) : '',
-            category: toStr(section.category),
-            productIds: Array.isArray(section.productIds) ? section.productIds.join('\n') : '',
-        }),
-        write: (body) => ({
-            title: toStr(body.title),
-            categories: splitList(body.categories),
-            discount: toNum(body.discount, 0),
-            categoryid: toStr(body.categoryid),
-            category: toStr(body.category),
-            productIds: parseObjectIdList(body.productIds, 50),
+            cta: { text: toStr(body.ctaText), href: '/promo?section=demiFineJewelleryProducts' },
         }),
     },
     storefrontdiscountbannermaster: {
         cmsKey: 'discountBanner',
+        readDiscountUpTo: (section = {}) => {
+            const direct = toNum(section.discountUpTo, 0);
+            if (direct > 0) return direct;
+            const href = toStr(section.href);
+            const m = href.match(/discount=(\d{1,2})/i);
+            return m ? toNum(m[1], 0) : 0;
+        },
         read: (section = {}) => ({
             image: toStr(section.image),
             alt: toStr(section.alt),
@@ -45,7 +33,7 @@ const DEFS = {
             title: toStr(section.title),
             description: toStr(section.description),
             cta: toStr(section.cta),
-            href: toStr(section.href),
+            discountUpTo: DEFS.storefrontdiscountbannermaster.readDiscountUpTo(section),
         }),
         write: (body) => ({
             image: toStr(body.image),
@@ -54,7 +42,7 @@ const DEFS = {
             title: toStr(body.title),
             description: toStr(body.description),
             cta: toStr(body.cta),
-            href: toStr(body.href),
+            discountUpTo: Math.max(0, Math.min(99, toNum(body.discountUpTo, 0))),
         }),
     },
     storefrontshopbyrecipientmaster: {

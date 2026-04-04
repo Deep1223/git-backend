@@ -2,7 +2,9 @@ const EcomOrder = require('../../modal/ecomOrder');
 const EcomCart = require('../../modal/ecomCart');
 const EcomProduct = require('../../modal/ecomProduct');
 const EcomAnalytics = require('../../modal/ecomAnalytics');
-const { resolveActor } = require('./helpers');
+const { resolveActor, mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
+const { mirrorAvailableQtyFromEcomProduct } = require('../../lib/catalogProductMasterSync');
+const { notifyAllAdmins } = require('../../lib/adminNotify');
 
 function dayKey(date) {
     return date.toISOString().slice(0, 10);
@@ -23,12 +25,15 @@ exports.createOrder = async (req, res) => {
         const cart = await EcomCart.findOne(filterByActor(actor));
         if (cart?.items?.length) {
             const productIds = cart.items.map((i) => i.product);
-            const products = await EcomProduct.find({ _id: { $in: productIds } }).lean();
+            const products = await EcomProduct.find({ _id: { $in: productIds } })
+                .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
+                .lean();
             const productMap = new Map(products.map((p) => [String(p._id), p]));
 
             for (const row of cart.items) {
                 const product = productMap.get(String(row.product));
-                if (!product || product.hidden || product.stock < row.quantity) {
+                const pub = product ? mapProductPublic(product) : null;
+                if (!product || product.hidden || !pub || pub.stock < row.quantity) {
                     return res.status(400).json({
                         success: false,
                         message: `Stock unavailable for one or more products`,
@@ -36,8 +41,8 @@ exports.createOrder = async (req, res) => {
                 }
                 const line = {
                     product: product._id,
-                    name: product.name,
-                    image: product.images?.[0] || '',
+                    name: pub.name,
+                    image: pub.image || '',
                     quantity: row.quantity,
                     price: row.priceSnapshot,
                 };
@@ -79,6 +84,7 @@ exports.createOrder = async (req, res) => {
                     recentSalesCount: item.quantity,
                 },
             });
+            await mirrorAvailableQtyFromEcomProduct(item.product);
         }
 
         await EcomAnalytics.findOneAndUpdate(
@@ -91,6 +97,22 @@ exports.createOrder = async (req, res) => {
             cart.items = [];
             await cart.save();
         }
+
+        const itemCount = items.reduce((s, i) => s + i.quantity, 0);
+        notifyAllAdmins({
+            type: 'new_order',
+            boldName: 'New order',
+            text: `New order — Rs ${Number(totalAmount).toLocaleString('en-IN')} · ${itemCount} unit(s)`,
+            name: 'New order',
+            body: `A storefront order was placed. Total Rs ${Number(totalAmount).toLocaleString('en-IN')} across ${items.length} line(s), ${itemCount} unit(s).`,
+            boldTag: `Rs ${Number(totalAmount).toLocaleString('en-IN')}`,
+            subDesc: `${items.length} line item(s)`,
+            tag: 'Orders',
+            sender: 'Store',
+            initials: 'NO',
+            redirectPath: '/dashboard',
+            meta: { orderId: String(order._id), totalAmount, lineCount: items.length },
+        });
 
         return res.status(201).json({ success: true, data: order });
     } catch (error) {
@@ -162,6 +184,39 @@ exports.verifyPayment = async (req, res) => {
             { new: true }
         );
         if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+        if (paymentStatus === 'failed') {
+            notifyAllAdmins({
+                type: 'payment_failed',
+                boldName: 'Payment failed',
+                text: `Payment failed for order ${orderId}`,
+                name: 'Payment failed',
+                body: 'The payment did not complete. Order may be cancelled or still pending — verify in your payment dashboard.',
+                boldTag: 'payment',
+                subDesc: 'Gateway reported failure',
+                tag: 'Payments',
+                sender: 'Payments',
+                initials: 'PF',
+                redirectPath: '/dashboard',
+                meta: { orderId: String(orderId) },
+            });
+        } else if (paymentStatus === 'paid') {
+            notifyAllAdmins({
+                type: 'payment_success',
+                boldName: 'Payment received',
+                text: `Payment confirmed for order ${orderId}`,
+                name: 'Payment received',
+                body: 'Payment was marked successful. Order can move to fulfillment.',
+                boldTag: 'paid',
+                subDesc: 'Confirmed',
+                tag: 'Payments',
+                sender: 'Payments',
+                initials: 'OK',
+                redirectPath: '/dashboard',
+                meta: { orderId: String(orderId) },
+            });
+        }
+
         return res.status(200).json({ success: true, data: order });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'payment_verify_failed' });
@@ -187,11 +242,48 @@ exports.razorpayWebhook = async (req, res) => {
         const paymentStatus = paidEvents.has(event) ? 'paid' : failedEvents.has(event) ? 'failed' : 'pending';
         const orderStatus = paymentStatus === 'paid' ? 'confirmed' : paymentStatus === 'failed' ? 'cancelled' : 'processing';
 
-        await EcomOrder.findByIdAndUpdate(orderId, {
-            paymentStatus,
-            orderStatus,
-            paymentReference: payload?.payment?.entity?.id || payload?.order?.entity?.id || '',
-        });
+        const updated = await EcomOrder.findByIdAndUpdate(
+            orderId,
+            {
+                paymentStatus,
+                orderStatus,
+                paymentReference: payload?.payment?.entity?.id || payload?.order?.entity?.id || '',
+            },
+            { new: true }
+        ).lean();
+
+        if (paymentStatus === 'failed') {
+            notifyAllAdmins({
+                type: 'payment_failed',
+                boldName: 'Payment failed',
+                text: `Payment failed for order ${orderId} (webhook)`,
+                name: 'Payment failed',
+                body: 'Razorpay (or your gateway) reported a failed payment.',
+                boldTag: 'webhook',
+                subDesc: event || 'payment.failed',
+                tag: 'Payments',
+                sender: 'Gateway',
+                initials: 'PF',
+                redirectPath: '/dashboard',
+                meta: { orderId: String(orderId), event },
+            });
+        } else if (paymentStatus === 'paid' && updated) {
+            notifyAllAdmins({
+                type: 'payment_success',
+                boldName: 'Payment received',
+                text: `Payment confirmed for order ${orderId} (webhook)`,
+                name: 'Payment received',
+                body: 'Gateway captured payment successfully.',
+                boldTag: 'paid',
+                subDesc: event || 'captured',
+                tag: 'Payments',
+                sender: 'Gateway',
+                initials: 'OK',
+                redirectPath: '/dashboard',
+                meta: { orderId: String(orderId), event },
+            });
+        }
+
         return res.status(200).json({ success: true });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'razorpay_webhook_failed' });

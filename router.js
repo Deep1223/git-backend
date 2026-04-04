@@ -30,13 +30,33 @@ const {
 } = require('./api/generalsetting');
 const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
-const {signup, login, logout, googleLogin, forgotPassword, resetPassword, getMe, setup2FA, verify2FA, toggle2FA} = require('./api/auth');
+const {
+    signup,
+    login,
+    logout,
+    googleLogin,
+    forgotPassword,
+    resetPassword,
+    getMe,
+    setup2FA,
+    verify2FA,
+    toggle2FA,
+    updateProfile,
+    changePassword,
+    getLoginSessions,
+    removeLoginSession,
+    getMyActivity,
+} = require('./api/auth');
+const { submitFeedback } = require('./api/feedback');
 const { protect } = require('./middleware/auth');
 
 const audit = require('./middleware/audit');
 
 const {getAllUsers, getUserById, createUser, updateUser, deleteUser} = require('./api/usermaster');
 const { getConfig } = require('./api/config');
+const { listNotifications, markNotificationRead, markAllRead } = require('./api/adminNotifications');
+const { getStoreInventorySettings, updateStoreInventorySettings } = require('./api/storeInventorySettings');
+const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
 const {
     postPublicCategories,
@@ -86,10 +106,16 @@ router.route('/auth/logout').get(logout);
 router.route('/auth/google').post(googleLogin);
 router.route('/auth/forgotpassword').post(forgotPassword);
 router.route('/auth/resetpassword').post(resetPassword);
-router.route('/auth/me').get(getMe);
+router.route('/auth/me').get(protect, getMe);
+router.route('/auth/profile').put(protect, audit('UPDATE', 'User'), updateProfile);
+router.route('/auth/password').put(protect, audit('UPDATE', 'User'), changePassword);
+router.route('/auth/sessions').get(protect, getLoginSessions);
+router.route('/auth/sessions/:id').delete(protect, audit('UPDATE', 'User'), removeLoginSession);
+router.route('/auth/activity').get(protect, getMyActivity);
+router.route('/auth/feedback').post(protect, submitFeedback);
 router.route('/auth/2fa/setup').post(setup2FA); // Removed protect for login flow support
 router.route('/auth/2fa/verify').post(verify2FA); // Removed protect for login flow support
-router.route('/auth/2fa').put(protect, toggle2FA);
+router.route('/auth/2fa').put(protect, audit('2FA_TOGGLE', 'User'), toggle2FA);
 
 // Generate Usercode Routes
 router.route('/generateusercode').get(generateUsercode).post(generateUsercode);
@@ -193,6 +219,24 @@ router.route('/generalsetting/:id').get(protect, getGeneralSettingById);
 
 // Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
 registerStorefrontHomeMasters(router, { protect, audit });
+
+// Admin notifications (dashboard header — cookie/Bearer auth)
+router.get('/notifications', protect, listNotifications);
+router.patch('/notifications/:id/read', protect, markNotificationRead);
+router.post('/notifications/mark-all-read', protect, markAllRead);
+
+// Store inventory — low stock threshold (e-com catalog + jobs + dashboard KPI)
+router.get('/store-inventory-settings', protect, getStoreInventorySettings);
+router.put('/store-inventory-settings', protect, audit('UPDATE', 'StoreInventorySettings'), updateStoreInventorySettings);
+
+// E-com catalog — low-stock list + stock edits (dashboard auth; must be registered before /ecom router)
+router.get('/ecom/admin/low-stock-products', protect, adminLowStockCatalog.listLowStockCatalogProducts);
+router.patch(
+    '/ecom/admin/low-stock-products/:id',
+    protect,
+    audit('UPDATE', 'EcomProduct'),
+    adminLowStockCatalog.patchLowStockCatalogProductStock
+);
 
 // Config Route
 router.get('/config', getConfig); // Public access for app config

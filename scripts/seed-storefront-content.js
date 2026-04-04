@@ -8,27 +8,23 @@ const img = require('../config/storefrontCloudinaryPlaceholders');
 const DEFAULT_HERO_SLIDES = [
     {
         image: img.hero1,
-        title: 'EVERYDAY ELEGANCE',
-        subtitle: 'Discover our new collection',
+        title: 'BUY ONE GET ONE FREE',
+        subtitle: 'Double the sparkle — two pieces, one checkout',
         caption: '',
         cta: 'SHOP NOW',
-        href: '/all',
+        href: '',
+        buyOneGetOneFree: true,
+        discountUpTo: 0,
     },
     {
         image: img.hero2,
-        title: 'DEMI-FINE JEWELLERY',
-        subtitle: 'Premium quality, accessible luxury',
+        title: 'LIMITED TIME',
+        subtitle: 'Up to 50% off selected demi-fine jewellery',
         caption: '',
-        cta: 'EXPLORE',
-        href: '/all',
-    },
-    {
-        image: img.hero3,
-        title: '9KT FINE GOLD',
-        subtitle: 'Lab grown diamonds set in solid 9KT gold',
-        caption: '',
-        cta: 'DISCOVER',
-        href: '/category/9kt-gold',
+        cta: 'SHOP SALE',
+        href: '',
+        buyOneGetOneFree: false,
+        discountUpTo: 50,
     },
 ];
 

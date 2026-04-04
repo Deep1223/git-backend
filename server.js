@@ -18,6 +18,11 @@ dotenv.config();
 
 const app = express();
 
+// When behind nginx/Railway/etc., set TRUST_PROXY=1 so req.ip and rate limits use X-Forwarded-For.
+if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+}
+
 // Enable CORS at the very top (comma-separated FRONTEND_URL; default covers common CRA ports)
 const defaultDevOrigins = 'http://localhost:3000,http://localhost:3001,http://localhost:4000';
 const allowedOrigins = (process.env.FRONTEND_URL || defaultDevOrigins)

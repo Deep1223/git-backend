@@ -30,6 +30,16 @@ const productMasterSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Original price is required']
     },
+    /** Storefront promo listing: /promo?offer=bogo */
+    buyOneGetOneFree: {
+        type: Boolean,
+        default: false,
+    },
+    /** Dashboard: which Orinket homepage sections this product is associated with (marketing / merchandising). */
+    storefrontHomeSectionKeys: {
+        type: [String],
+        default: [],
+    },
     categoryid: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'CategoryMaster',
@@ -127,7 +137,9 @@ productMasterSchema.pre('save', async function () {
             this.productseries = await allocateNextProductSeriesCode();
         }
     } else {
-        if (this.isModified('productseries')) {
+        if (!this.productseries || !String(this.productseries).trim()) {
+            this.productseries = await allocateNextProductSeriesCode();
+        } else if (this.isModified('productseries')) {
             const existing = await this.constructor.findById(this._id).select('productseries').lean();
             if (existing?.productseries) {
                 this.productseries = existing.productseries;

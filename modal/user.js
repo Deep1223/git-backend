@@ -137,6 +137,17 @@ const userSchema = new mongoose.Schema({
     lockUntil: {
         type: Number
     },
+    /** Recent sign-ins for “My devices” (newest first, capped in app logic). */
+    loginHistory: {
+        type: [
+            {
+                at: { type: Date, default: Date.now },
+                ip: { type: String, trim: true, default: '' },
+                userAgent: { type: String, trim: true, default: '' },
+            },
+        ],
+        default: [],
+    },
     recordinfo: {
         createat: { type: Date, default: Date.now },
         createby: { type: String },

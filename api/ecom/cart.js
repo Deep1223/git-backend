@@ -1,6 +1,6 @@
 const EcomCart = require('../../modal/ecomCart');
 const EcomProduct = require('../../modal/ecomProduct');
-const { resolveActor, mapProductPublic } = require('./helpers');
+const { resolveActor, mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
 
 async function getCartForActor(actor, createIfMissing = true) {
     const filter = actor.userId ? { user: actor.userId } : { sessionId: actor.sessionId };
@@ -14,7 +14,10 @@ async function getCartForActor(actor, createIfMissing = true) {
 async function cartResponse(cart) {
     if (!cart) return { items: [], total: 0 };
     const ids = cart.items.map((i) => i.product);
-    const products = await EcomProduct.find({ _id: { $in: ids } }).populate('category', 'name slug').lean();
+    const products = await EcomProduct.find({ _id: { $in: ids } })
+        .populate('category', 'name slug')
+        .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
+        .lean();
     const map = new Map(products.map((p) => [String(p._id), p]));
     const items = cart.items
         .map((row) => {
@@ -49,19 +52,26 @@ exports.addToCart = async (req, res) => {
             return res.status(400).json({ success: false, message: 'sessionId required for guest cart' });
         }
         const { productId, quantity = 1 } = req.body || {};
-        const product = await EcomProduct.findById(productId).lean();
+        const product = await EcomProduct.findById(productId)
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
+            .lean();
         if (!product || product.hidden) return res.status(404).json({ success: false, message: 'Product not found' });
         const safeQty = Math.max(1, Number(quantity || 1));
+        const pub = mapProductPublic(product);
+        const maxStock = Math.max(0, pub.stock);
+        if (maxStock <= 0) {
+            return res.status(400).json({ success: false, message: 'Product is out of stock' });
+        }
 
         const cart = await getCartForActor(actor, true);
         const existing = cart.items.find((i) => String(i.product) === String(product._id));
         if (existing) {
-            existing.quantity = Math.min(existing.quantity + safeQty, Math.max(1, product.stock));
+            existing.quantity = Math.min(existing.quantity + safeQty, Math.max(1, maxStock || 1));
         } else {
             cart.items.push({
                 product: product._id,
-                quantity: Math.min(safeQty, Math.max(1, product.stock)),
-                priceSnapshot: product.price,
+                quantity: Math.min(safeQty, Math.max(1, maxStock || 1)),
+                priceSnapshot: pub.price,
             });
         }
         await cart.save();

@@ -171,6 +171,16 @@ function normalizeBody(body) {
     if (!Array.isArray(b.heroSlides)) b.heroSlides = [];
     b.heroSlides = b.heroSlides.map((row) => {
         const r = row && typeof row === 'object' ? { ...row } : {};
+        const bogo =
+            r.buyOneGetOneFree === true ||
+            r.buyOneGetOneFree === 1 ||
+            r.buyOneGetOneFree === '1' ||
+            String(r.buyOneGetOneFree || '').toLowerCase() === 'true';
+        let disc = Number(r.discountUpTo);
+        if (!Number.isFinite(disc)) disc = 0;
+        disc = Math.floor(disc);
+        if (disc < 0) disc = 0;
+        if (disc > 99) disc = 99;
         return {
             image: r.image != null ? String(r.image).trim() : '',
             title: r.title != null ? String(r.title).trim() : '',
@@ -178,6 +188,8 @@ function normalizeBody(body) {
             caption: r.caption != null ? String(r.caption).trim() : '',
             cta: r.cta != null ? String(r.cta).trim() : '',
             href: r.href != null ? String(r.href).trim() : '',
+            buyOneGetOneFree: Boolean(bogo),
+            discountUpTo: disc,
         };
     });
 

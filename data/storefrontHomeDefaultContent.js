@@ -11,7 +11,10 @@ function getDefaultStorefrontHomeContent() {
             title: 'EVERYDAY DEMI-FINE JEWELLERY',
             description:
                 'Discover our collection of 18k thick gold plated jewellery. Premium metals, lasting shine, and designs for every day.',
-            cta: { text: 'SHOP COLLECTION', href: '/collections/all' },
+            cta: {
+                text: 'SHOP COLLECTION',
+                href: '/promo?section=demiFineJewelleryProducts',
+            },
         },
         topStylesSection: {
             title: 'ORINKET TOP STYLES',
@@ -28,7 +31,7 @@ function getDefaultStorefrontHomeContent() {
             title: 'UP TO 50% OFF',
             description: 'On selected demi-fine pieces',
             cta: 'SHOP SALE',
-            href: '/sale',
+            discountUpTo: 50,
         },
         shopByRecipient: {
             title: 'SHOP BY RECIPIENT',
@@ -62,8 +65,8 @@ function getDefaultStorefrontHomeContent() {
             ],
         },
         fineGoldSection: {
-            title: 'Featured collection',
-            description: 'A curated edit of fine-gold inspired silhouettes.',
+            title: '925 SILVER POST',
+            description: 'Lab grown diamonds set in solid 9KT gold. Premium jewelry crafted for timeless elegance',
             filters: ['All'],
             emptyState: {
                 title: 'No products found',
@@ -175,27 +178,27 @@ function getDefaultStorefrontHomeContent() {
             description: 'Curated by Priya Sharma',
             cta: { text: 'SHOP NOW', href: '/collections/all' },
         },
-        visitStores: {
-            title: 'VISIT OUR STORES',
-            subtitle: 'Experience our collection in person',
-            stores: [
-                {
-                    name: 'Mumbai - Phoenix Mall',
-                    city: 'Mumbai',
-                    address: 'Lower Parel, Mumbai',
-                    image: img.store1,
-                    href: '/stores/mumbai-phoenix-mall',
-                },
-                {
-                    name: 'Delhi - Select Citywalk',
-                    city: 'Delhi',
-                    address: 'Saket, New Delhi',
-                    image: img.store2,
-                    href: '/stores/delhi-select-citywalk',
-                },
-            ],
-            button: { text: 'FIND ALL STORES', href: '/stores' },
-        },
+        // visitStores: {
+        //     title: 'VISIT OUR STORES',
+        //     subtitle: 'Experience our collection in person',
+        //     stores: [
+        //         {
+        //             name: 'Mumbai - Phoenix Mall',
+        //             city: 'Mumbai',
+        //             address: 'Lower Parel, Mumbai',
+        //             image: img.store1,
+        //             href: '/stores/mumbai-phoenix-mall',
+        //         },
+        //         {
+        //             name: 'Delhi - Select Citywalk',
+        //             city: 'Delhi',
+        //             address: 'Saket, New Delhi',
+        //             image: img.store2,
+        //             href: '/stores/delhi-select-citywalk',
+        //         },
+        //     ],
+        //     button: { text: 'FIND ALL STORES', href: '/stores' },
+        // },
     };
 }
 

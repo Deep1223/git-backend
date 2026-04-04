@@ -6,11 +6,74 @@ const sendEmail = require('../utils/sendEmail');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const SeriesMaster = require('../modal/seriesmaster');
+const AuditLog = require('../modal/auditlog');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+/** Strip IPv4-mapped / IPv6 loopback for consistent storage and display. */
+function normalizeClientIp(ip) {
+    let s = String(ip || '').trim();
+    if (!s) return '';
+    if (s.startsWith('::ffff:')) s = s.slice(7);
+    if (s === '::1' || s === '0:0:0:0:0:0:0:1') return '127.0.0.1';
+    return s;
+}
+
+function isLoopbackIp(normalized) {
+    if (!normalized) return false;
+    return normalized === '127.0.0.1' || normalized === 'localhost';
+}
+
+function displayClientIp(normalized) {
+    if (!normalized) return '';
+    if (isLoopbackIp(normalized)) return 'This device (local network)';
+    return normalized;
+}
+
+/** Best-effort client IP: X-Forwarded-For / X-Real-IP / Express req.ip / socket. */
+function getClientIp(req) {
+    if (!req) return '';
+    const xff = req.headers['x-forwarded-for'];
+    if (xff) {
+        const first = String(xff).split(',')[0].trim();
+        if (first && first.toLowerCase() !== 'unknown') {
+            return normalizeClientIp(first).slice(0, 80);
+        }
+    }
+    const xr = req.headers['x-real-ip'];
+    if (xr) {
+        const p = String(xr).split(',')[0].trim();
+        if (p) return normalizeClientIp(p).slice(0, 80);
+    }
+    const raw = req.ip || req.socket?.remoteAddress || '';
+    return normalizeClientIp(String(raw)).slice(0, 80);
+}
+
+async function recordLoginHistory(userId, req) {
+    if (!req || !userId) return;
+    try {
+        await User.findByIdAndUpdate(userId, {
+            $push: {
+                loginHistory: {
+                    $each: [
+                        {
+                            at: new Date(),
+                            ip: getClientIp(req),
+                            userAgent: String(req.headers['user-agent'] || '').slice(0, 400),
+                        },
+                    ],
+                    $position: 0,
+                    $slice: 25,
+                },
+            },
+        });
+    } catch (e) {
+        console.warn('recordLoginHistory:', e.message);
+    }
+}
+
 // Helper function to get token from model, create cookie and send response
-const sendTokenResponse = async (user, statusCode, res, message = '') => {
+const sendTokenResponse = async (user, statusCode, res, message = '', req = null) => {
     // Create token
     const token = user.getSignedJwtToken();
 
@@ -54,6 +117,8 @@ const sendTokenResponse = async (user, statusCode, res, message = '') => {
         }
     }
 
+    await recordLoginHistory(user._id, req);
+
     res
         .status(statusCode)
         .cookie('token', token, options)
@@ -64,10 +129,13 @@ const sendTokenResponse = async (user, statusCode, res, message = '') => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                firstname: user.firstname,
+                lastname: user.lastname,
                 role: user.role,
                 roleid: user.roleid,
                 twofactorenabled: user.twofactorenabled,
-                usercode: usercode 
+                usercode: usercode,
+                status: user.status,
             }
         });
 };
@@ -328,7 +396,7 @@ exports.googleLogin = async (req, res) => {
         // Set entity for audit log
         res.locals.entity = { id: user._id };
 
-        sendTokenResponse(user, 200, res, 'Google Login successful');
+        sendTokenResponse(user, 200, res, 'Google Login successful', req);
     } catch (error) {
         console.error('Google Auth Error:', error);
         res.status(500).json({
@@ -386,7 +454,7 @@ exports.signup = async (req, res) => {
         // Set entity for audit log
         res.locals.entity = { id: user._id };
 
-        sendTokenResponse(user, 201, res, 'User registered successfully');
+        sendTokenResponse(user, 201, res, 'User registered successfully', req);
     } catch (error) {
         if (error.code === 11000) {
             return res.status(400).json({
@@ -474,7 +542,7 @@ exports.login = async (req, res) => {
             });
         } else {
             // If 2FA is not enabled, proceed with login
-            sendTokenResponse(user, 200, res, 'Login successful');
+            sendTokenResponse(user, 200, res, 'Login successful', req);
         }
 
     } catch (error) {
@@ -577,7 +645,7 @@ exports.verify2FA = async (req, res) => {
             res.locals.entity = { id: user._id };
             
             // Return full token response to finish login
-            sendTokenResponse(user, 200, res, '2FA verified. Login successful.');
+            sendTokenResponse(user, 200, res, '2FA verified. Login successful.', req);
         } else {
             res.status(400).json({ success: false, message: 'Invalid 2FA token' });
         }
@@ -587,19 +655,246 @@ exports.verify2FA = async (req, res) => {
     }
 };
 
+function sanitizeUserForClient(doc) {
+    if (!doc) return null;
+    const u = doc.toObject ? doc.toObject() : { ...doc };
+    return {
+        id: u._id,
+        _id: u._id,
+        username: u.username,
+        firstname: u.firstname,
+        lastname: u.lastname,
+        email: u.email,
+        mobilenumber: u.mobilenumber,
+        usercode: u.usercode,
+        status: u.status,
+        twofactorenabled: Boolean(u.twofactorenabled),
+        profileimage: u.profileimage,
+        addressline1: u.addressline1,
+        city: u.city,
+        state: u.state,
+        country: u.country,
+        pincode: u.pincode,
+        role: u.role,
+        roleid: u.roleid,
+    };
+}
+
 // Get current logged in user
 exports.getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.user.id);
+        const user = await User.findById(req.user.id).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
         res.status(200).json({
             success: true,
-            data: user
+            data: sanitizeUserForClient(user),
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: 'Server Error'
+            message: 'Server Error',
         });
+    }
+};
+
+/** Update own profile (dashboard “My Profile”). */
+exports.updateProfile = async (req, res) => {
+    try {
+        const allowed = [
+            'firstname',
+            'lastname',
+            'mobilenumber',
+            'addressline1',
+            'city',
+            'state',
+            'country',
+            'pincode',
+            'profileimage',
+        ];
+        const body = req.body || {};
+        const $set = {};
+        for (const k of allowed) {
+            if (body[k] === undefined || body[k] === null) continue;
+            $set[k] = typeof body[k] === 'string' ? String(body[k]).trim() : body[k];
+        }
+        if (Object.keys($set).length === 0) {
+            return res.status(400).json({ success: false, message: 'No valid fields to update' });
+        }
+        const user = await User.findByIdAndUpdate(req.user.id, { $set }, { new: true, runValidators: true }).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        res.status(200).json({
+            success: true,
+            message: 'Profile updated',
+            data: sanitizeUserForClient(user),
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message || 'Update failed',
+        });
+    }
+};
+
+/** Change password (current + new). */
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body || {};
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'currentPassword and newPassword are required',
+            });
+        }
+        if (String(newPassword).length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'New password must be at least 8 characters',
+            });
+        }
+        const user = await User.findById(req.user.id).select('+password');
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        if (user.googleid && !user.password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Google sign-in accounts use Google to manage password',
+            });
+        }
+        const ok = await user.matchPassword(currentPassword);
+        if (!ok) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+        user.password = newPassword;
+        await user.save();
+        res.status(200).json({ success: true, message: 'Password updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    }
+};
+
+/** Recent sign-ins for “My devices”. */
+exports.getLoginSessions = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id).select('loginHistory').lean();
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        const rows = user.loginHistory || [];
+        const data = rows.map((row, idx) => {
+            const rawIp = row.ip || '';
+            const normalized = normalizeClientIp(rawIp);
+            return {
+                id: row._id ? String(row._id) : `h-${idx}`,
+                at: row.at,
+                ip: rawIp,
+                ipDisplay: displayClientIp(normalized),
+                isLoopback: isLoopbackIp(normalized),
+                userAgent: row.userAgent || '',
+                current: idx === 0,
+            };
+        });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+/** Remove one login history row (does not invalidate tokens on remote devices). */
+exports.removeLoginSession = async (req, res) => {
+    try {
+        const id = req.params.id;
+        if (!id || String(id).startsWith('h-')) {
+            return res.status(400).json({ success: false, message: 'Invalid session id' });
+        }
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        const rows = user.loginHistory || [];
+        if (rows.length && String(rows[0]._id) === String(id)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot remove your current session from this list',
+            });
+        }
+        const before = rows.length;
+        user.loginHistory = rows.filter((h) => String(h._id) !== String(id));
+        if (user.loginHistory.length === before) {
+            return res.status(404).json({ success: false, message: 'Session not found' });
+        }
+        await user.save();
+        res.locals.auditDetails = 'Removed a device from sign-in history';
+        res.status(200).json({ success: true, message: 'Session removed' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Server Error' });
+    }
+};
+
+function activityCategory(log) {
+    const a = log.action;
+    if (a === 'LOGIN' || a === 'LOGOUT') return 'signin';
+    if (a === '2FA_TOGGLE' || a === '2FA_SETUP' || a === '2FA_VERIFY') return 'security';
+    if (a === 'UPDATE' && log.entity === 'User') {
+        const d = String(log.details || '').toLowerCase();
+        if (d.includes('session') || d.includes('device') || d.includes('sign-in')) return 'security';
+        return 'settings';
+    }
+    if (['CREATE', 'UPDATE', 'DELETE'].includes(a)) return 'data';
+    return 'data';
+}
+
+function activityTitle(log) {
+    switch (log.action) {
+        case 'LOGIN':
+            return 'Signed in successfully';
+        case 'LOGOUT':
+            return 'Signed out';
+        case '2FA_TOGGLE':
+            return 'Two-factor authentication updated';
+        case '2FA_SETUP':
+            return 'Two-factor authentication setup';
+        case '2FA_VERIFY':
+            return 'Two-factor verification completed';
+        case 'CREATE':
+            return `Created ${log.entity}`;
+        case 'UPDATE':
+            return log.entity === 'User' ? 'Account or profile updated' : `Updated ${log.entity}`;
+        case 'DELETE':
+            return `Deleted ${log.entity}`;
+        default:
+            return `${log.action} · ${log.entity}`;
+    }
+}
+
+/** Recent audit trail rows for the signed-in user (Activity Log). */
+exports.getMyActivity = async (req, res) => {
+    try {
+        const logs = await AuditLog.find({ user: req.user.id })
+            .sort({ 'recordinfo.createat': -1 })
+            .limit(100)
+            .lean();
+        const data = logs.map((log) => {
+            const at = log.recordinfo?.createat;
+            return {
+                id: String(log._id),
+                action: log.action,
+                entity: log.entity,
+                category: activityCategory(log),
+                title: activityTitle(log),
+                details: log.details || '',
+                status: log.status,
+                ip: log.ipaddress || '',
+                at,
+            };
+        });
+        res.status(200).json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
 

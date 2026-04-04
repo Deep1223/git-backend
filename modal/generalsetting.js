@@ -21,6 +21,9 @@ const heroSlideSchema = new mongoose.Schema(
         caption: { type: String, trim: true, default: '' },
         cta: { type: String, trim: true, default: '' },
         href: { type: String, trim: true, default: '' },
+        buyOneGetOneFree: { type: Boolean, default: false },
+        /** 1–99 = CTA links to /promo?discount=n; 0 or omit = ignore */
+        discountUpTo: { type: Number, default: 0 },
     },
     { _id: false }
 );
