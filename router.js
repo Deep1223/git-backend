@@ -22,6 +22,13 @@ const {
 } = require('./api/productmaster');
 const { getAllSubCategories, getSubCategoryById, createSubCategory, updateSubCategory, deleteSubCategory } = require('./api/subcategorymaster');
 const {
+    getAllOccasions,
+    getOccasionById,
+    createOccasion,
+    updateOccasion,
+    deleteOccasion,
+} = require('./api/occasionmaster');
+const {
     getAllGeneralSettings,
     getGeneralSettingById,
     createGeneralSetting,
@@ -68,6 +75,7 @@ const {
     postPublicCmsFaq,
     postPublicCmsShipping,
     postPublicCmsReturns,
+    postPublicOccasions,
 } = require('./publicapis');
 
 const {
@@ -203,6 +211,13 @@ router.route('/productmaster/update').post(protect, audit('UPDATE', 'Product'), 
 router.route('/productmaster/delete').post(protect, audit('DELETE', 'Product'), deleteProduct);
 router.route('/productmaster/:id').get(protect, getProductById);
 
+// Occasion Master Routes
+router.route('/occasionmaster').post(protect, getAllOccasions).get(protect, getAllOccasions);
+router.route('/occasionmaster/create').post(protect, audit('CREATE', 'Occasion'), createOccasion);
+router.route('/occasionmaster/update').post(protect, audit('UPDATE', 'Occasion'), updateOccasion);
+router.route('/occasionmaster/delete').post(protect, audit('DELETE', 'Occasion'), deleteOccasion);
+router.route('/occasionmaster/:id').get(protect, getOccasionById);
+
 // Sub Category Master Routes
 router.route('/subcategorymaster').post(protect, getAllSubCategories).get(protect, getAllSubCategories);
 router.route('/subcategorymaster/create').post(protect, audit('CREATE', 'SubCategory'), createSubCategory);
@@ -246,6 +261,7 @@ router.post('/config', getConfig); // Support POST for email/password authentica
 router.post('/public/categories', postPublicCategories);
 router.post('/public/subcategories', postPublicSubcategories);
 router.post('/public/products', postPublicProducts);
+router.post('/public/occasions', postPublicOccasions);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
 router.post('/public/cms-contact', postPublicCmsContact);

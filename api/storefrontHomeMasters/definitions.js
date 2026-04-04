@@ -62,20 +62,16 @@ const DEFS = {
     storefrontforeveryyoumaster: {
         cmsKey: 'forEveryYou',
         read: (section = {}) => ({
+            eyebrow: toStr(section.eyebrow),
             title: toStr(section.title),
             description: toStr(section.description),
-            ...mapRowHelpers.readOccasion(section, 1),
-            ...mapRowHelpers.readOccasion(section, 2),
-            ...mapRowHelpers.readOccasion(section, 3),
+            ornament: toStr(section.ornament),
         }),
         write: (body) => ({
+            eyebrow: toStr(body.eyebrow),
             title: toStr(body.title),
             description: toStr(body.description),
-            occasions: [
-                mapRowHelpers.writeOccasion(body, 1),
-                mapRowHelpers.writeOccasion(body, 2),
-                mapRowHelpers.writeOccasion(body, 3),
-            ].filter((row) => row.title || row.subtitle || row.image || row.href),
+            ornament: toStr(body.ornament),
         }),
     },
     storefrontfinegoldmaster: {

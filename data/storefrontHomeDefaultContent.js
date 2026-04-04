@@ -41,28 +41,10 @@ function getDefaultStorefrontHomeContent() {
             ],
         },
         forEveryYou: {
+            eyebrow: 'Shop by Occasion',
             title: 'FOR EVERY YOU',
             description: 'From boardrooms to brunches, we have pieces that complement every version of you.',
-            occasions: [
-                {
-                    title: 'The Professional',
-                    subtitle: 'Elegant pieces for everyday office style',
-                    image: img.car,
-                    href: '/collections/office',
-                },
-                {
-                    title: 'The Glamorous',
-                    subtitle: 'Statement pieces for special occasions',
-                    image: img.kitchen,
-                    href: '/collections/evening',
-                },
-                {
-                    title: 'The Casual',
-                    subtitle: 'Effortless style for weekend vibes',
-                    image: img.sample,
-                    href: '/collections/casual',
-                },
-            ],
+            ornament: '— Orinket —',
         },
         fineGoldSection: {
             title: '925 SILVER POST',

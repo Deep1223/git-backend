@@ -1,5 +1,7 @@
+const mongoose = require('mongoose');
 const ProductMaster = require('../modal/productmaster');
 const CategoryMaster = require('../modal/categorymaster');
+const OccasionMaster = require('../modal/occasionmaster');
 const { slugifyLabel } = require('../lib/slugifyLabel');
 const { getPreviewNextProductSeriesCode } = require('../lib/productSeriesAllocator');
 const { syncLinkedCatalogFromProductMaster } = require('../lib/catalogProductMasterSync');
@@ -33,11 +35,28 @@ function normalizeProductBody(body) {
             v === '1' ||
             String(v).toLowerCase() === 'true';
     }
+    if (b.showIn925SilverPost !== undefined && b.showIn925SilverPost !== null && b.showIn925SilverPost !== '') {
+        const v = b.showIn925SilverPost;
+        b.showIn925SilverPost =
+            v === true ||
+            v === 1 ||
+            v === '1' ||
+            String(v).toLowerCase() === 'true';
+    }
 
     if (b.storefrontHomeSectionKeys !== undefined) {
         b.storefrontHomeSectionKeys = Array.isArray(b.storefrontHomeSectionKeys)
             ? [...new Set(b.storefrontHomeSectionKeys.map((x) => String(x ?? '').trim()).filter(Boolean))]
             : [];
+    }
+
+    if (b.occasionids !== undefined) {
+        const raw = Array.isArray(b.occasionids) ? b.occasionids : [];
+        b.occasionids = [
+            ...new Set(
+                raw.map((x) => String(x ?? '').trim()).filter((id) => mongoose.Types.ObjectId.isValid(id))
+            ),
+        ];
     }
     if (b.status !== undefined && b.status !== null && b.status !== '') b.status = Number(b.status);
     if (b.availableQty !== undefined && b.availableQty !== null && b.availableQty !== '') {
@@ -64,6 +83,24 @@ function normalizeProductBody(body) {
     }
 
     return b;
+}
+
+async function syncOccasionLabels(body) {
+    if (body.occasionids === undefined) return;
+    if (!Array.isArray(body.occasionids) || body.occasionids.length === 0) {
+        body.occasionids = [];
+        body.occasions = [];
+        return;
+    }
+    const oids = body.occasionids.map((id) =>
+        id instanceof mongoose.Types.ObjectId ? id : new mongoose.Types.ObjectId(String(id))
+    );
+    body.occasionids = oids;
+    const docs = await OccasionMaster.find({ _id: { $in: oids } })
+        .select('occasionname')
+        .lean();
+    const map = new Map(docs.map((d) => [String(d._id), String(d.occasionname || '').trim()]));
+    body.occasions = oids.map((id) => map.get(String(id)) || '').filter(Boolean);
 }
 
 function resolveSort(paginationinfo) {
@@ -193,7 +230,25 @@ exports.getAllProducts = async (req, res) => {
     try {
         const { paginationinfo, searchtext } = req.body || {};
         let filter = normalizeStorefrontSectionFilter(paginationinfo?.filter || {});
-        
+
+        if (filter.occasionslug != null && String(filter.occasionslug).trim() !== '') {
+            const slug = slugifyLabel(filter.occasionslug);
+            delete filter.occasionslug;
+            const oc = await OccasionMaster.findOne({ slug, status: 1 }).select('_id').lean();
+            if (oc) {
+                filter.occasionids = oc._id;
+            } else {
+                filter._id = { $in: [] };
+            }
+        }
+        if (filter.occasionid != null && String(filter.occasionid).trim() !== '') {
+            const oid = String(filter.occasionid).trim();
+            delete filter.occasionid;
+            if (mongoose.Types.ObjectId.isValid(oid)) {
+                filter.occasionids = oid;
+            }
+        }
+
         // Convert tab slug to category filter if present
         if (filter.tab) {
             const catFilter = await resolveTabToCategoryFilter(filter.tab);
@@ -221,6 +276,7 @@ exports.getAllProducts = async (req, res) => {
                 { subcategory: { $regex: searchtext, $options: 'i' } },
                 { description: { $regex: searchtext, $options: 'i' } },
                 { material: { $regex: searchtext, $options: 'i' } },
+                { occasions: { $regex: searchtext, $options: 'i' } },
             ];
         }
 
@@ -358,6 +414,7 @@ exports.createProduct = async (req, res) => {
     try {
         delete req.body.productseries;
         Object.assign(req.body, normalizeProductBody(req.body));
+        await syncOccasionLabels(req.body);
 
         req.body.recordinfo = {
             createby: req.user ? req.user.username : 'system'
@@ -399,6 +456,7 @@ exports.updateProduct = async (req, res) => {
 
         delete req.body.productseries;
         Object.assign(req.body, normalizeProductBody(req.body));
+        await syncOccasionLabels(req.body);
 
         if (!req.body.recordinfo) req.body.recordinfo = {};
         req.body.recordinfo.updateby = req.user ? req.user.username : 'system';

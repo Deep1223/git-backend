@@ -35,6 +35,11 @@ const productMasterSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
+    /** Storefront: include product in 925 SILVER POST section. */
+    showIn925SilverPost: {
+        type: Boolean,
+        default: false,
+    },
     /** Dashboard: which Orinket homepage sections this product is associated with (marketing / merchandising). */
     storefrontHomeSectionKeys: {
         type: [String],
@@ -56,6 +61,15 @@ const productMasterSchema = new mongoose.Schema({
     subcategory: {
         type: String,
         trim: true
+    },
+    /** Occasion Master (multi-select); denormalized labels in `occasions` for search/display. */
+    occasionids: {
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OccasionMaster' }],
+        default: [],
+    },
+    occasions: {
+        type: [String],
+        default: [],
     },
     images: {
         type: [String],

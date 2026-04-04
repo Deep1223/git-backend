@@ -13,6 +13,7 @@ const {
     postPublicCmsShipping,
     postPublicCmsReturns,
 } = require('./cmsSupport');
+const { postPublicOccasions } = require('./occasionsPublic');
 
 module.exports = {
     postPublicCategories,
@@ -24,4 +25,5 @@ module.exports = {
     postPublicCmsFaq,
     postPublicCmsShipping,
     postPublicCmsReturns,
+    postPublicOccasions,
 };
