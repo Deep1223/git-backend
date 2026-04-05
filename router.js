@@ -35,6 +35,15 @@ const {
     updateGeneralSetting,
     deleteGeneralSetting,
 } = require('./api/generalsetting');
+const {
+    getAllStorefrontReviews,
+    getStorefrontReviewById,
+    createStorefrontReview,
+    updateStorefrontReview,
+    deleteStorefrontReview,
+    postPublicProductReviews,
+    submitPublicProductReview,
+} = require('./api/storefrontreviewsmaster');
 const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
 const {
@@ -232,6 +241,13 @@ router.route('/generalsetting/update').post(protect, audit('UPDATE', 'GeneralSet
 router.route('/generalsetting/delete').post(protect, audit('DELETE', 'GeneralSetting'), deleteGeneralSetting);
 router.route('/generalsetting/:id').get(protect, getGeneralSettingById);
 
+// Storefront Reviews Master (read-only in dashboard; data comes from storefront submissions)
+router.route('/storefrontreviewsmaster').post(protect, getAllStorefrontReviews).get(protect, getAllStorefrontReviews);
+router.route('/storefrontreviewsmaster/create').post(protect, audit('CREATE', 'StorefrontReview'), createStorefrontReview);
+router.route('/storefrontreviewsmaster/update').post(protect, audit('UPDATE', 'StorefrontReview'), updateStorefrontReview);
+router.route('/storefrontreviewsmaster/delete').post(protect, audit('DELETE', 'StorefrontReview'), deleteStorefrontReview);
+router.route('/storefrontreviewsmaster/:id').get(protect, getStorefrontReviewById);
+
 // Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
 registerStorefrontHomeMasters(router, { protect, audit });
 
@@ -264,6 +280,8 @@ router.post('/public/products', postPublicProducts);
 router.post('/public/occasions', postPublicOccasions);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
+router.post('/public/product-reviews', postPublicProductReviews);
+router.post('/public/product-reviews/submit', submitPublicProductReview);
 router.post('/public/cms-contact', postPublicCmsContact);
 router.post('/public/cms-faq', postPublicCmsFaq);
 router.post('/public/cms-shipping', postPublicCmsShipping);

@@ -1,5 +1,34 @@
 const { toStr, toNum, splitList, parseObjectIdList, mapRowHelpers } = require('./helpers');
 
+function toFeatureRow(row) {
+    const title = toStr(row?.featureTitle ?? row?.title);
+    const description = toStr(row?.featureDescription ?? row?.description);
+    const threshold = toNum(row?.featureThreshold ?? row?.freeShippingThresholdInr, 0);
+    const next = { title, description };
+    if (threshold > 0) next.freeShippingThresholdInr = threshold;
+    return next;
+}
+
+function readFeatures(section = {}) {
+    const source = Array.isArray(section.features) ? section.features : [];
+    return source
+        .map((row) => ({
+            featureTitle: toStr(row?.title),
+            featureDescription: toStr(row?.description),
+            featureThreshold: row?.freeShippingThresholdInr ?? '',
+        }))
+        .filter((row) => row.featureTitle || row.featureDescription || row.featureThreshold);
+}
+
+function writeFeatures(body = {}) {
+    const rows = Array.isArray(body.features)
+        ? body.features
+        : [1, 2, 3, 4].map((index) => mapRowHelpers.writeFeature(body, index));
+    return rows
+        .map((row) => toFeatureRow(row))
+        .filter((row) => row.title || row.description || row.freeShippingThresholdInr);
+}
+
 const DEFS = {
     storefrontdemifinemaster: {
         cmsKey: 'demifineSection',
@@ -155,25 +184,11 @@ const DEFS = {
         cmsKey: 'shopWithConfidence',
         read: (section = {}) => ({
             title: toStr(section.title),
-            ...mapRowHelpers.readFeature(section, 1),
-            ...mapRowHelpers.readFeature(section, 2),
-            ...mapRowHelpers.readFeature(section, 3),
-            ...mapRowHelpers.readFeature(section, 4),
+            features: readFeatures(section),
         }),
         write: (body) => ({
             title: toStr(body.title),
-            features: [
-                mapRowHelpers.writeFeature(body, 1),
-                mapRowHelpers.writeFeature(body, 2),
-                mapRowHelpers.writeFeature(body, 3),
-                mapRowHelpers.writeFeature(body, 4),
-            ]
-                .filter((row) => row.title || row.description || row.freeShippingThresholdInr)
-                .map((row) => {
-                    const next = { title: row.title, description: row.description };
-                    if (row.freeShippingThresholdInr) next.freeShippingThresholdInr = row.freeShippingThresholdInr;
-                    return next;
-                }),
+            features: writeFeatures(body),
         }),
     },
     storefrontbrandstorymaster: {

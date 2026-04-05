@@ -14,7 +14,6 @@ module.exports = [
     'storefrontblogsectionmaster',
     'storefrontshopwithconfidencemaster',
     'storefrontbrandstorymaster',
-    'storefrontreviewsmaster',
     'storefrontctabannermaster',
     'storefrontvisitstoresmaster',
 ];

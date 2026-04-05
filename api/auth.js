@@ -72,23 +72,27 @@ async function recordLoginHistory(userId, req) {
     }
 }
 
+/** Dashboard SPA on another origin (e.g. Vercel → Railway) needs SameSite=None + Secure or the token cookie is not sent on fetch(). */
+function getDashboardAuthCookieOptions(expires) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return {
+        expires,
+        httpOnly: true,
+        secure: isProd,
+        sameSite: isProd ? 'none' : 'lax',
+    };
+}
+
 // Helper function to get token from model, create cookie and send response
 const sendTokenResponse = async (user, statusCode, res, message = '', req = null) => {
     // Create token
     const token = user.getSignedJwtToken();
 
-    const options = {
-        expires: new Date(
+    const options = getDashboardAuthCookieOptions(
+        new Date(
             Date.now() + (process.env.JWT_COOKIE_EXPIRE || 30) * 24 * 60 * 60 * 1000
-        ),
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production' ? true : false,
-        sameSite: 'Strict'
-    };
-
-    if (process.env.NODE_ENV === 'production') {
-        options.secure = true;
-    }
+        )
+    );
 
     // Get user's assigned series directly from SeriesMaster
     let usercode = user.usercode || ''; // Use existing usercode if available
@@ -125,6 +129,7 @@ const sendTokenResponse = async (user, statusCode, res, message = '', req = null
         .json({
             success: true,
             message,
+            token,
             user: {
                 id: user._id,
                 username: user.username,
@@ -557,8 +562,7 @@ exports.login = async (req, res) => {
 // Log user out / clear cookie
 exports.logout = async (req, res) => {
     res.cookie('token', 'none', {
-        expires: new Date(Date.now() + 10 * 1000),
-        httpOnly: true
+        ...getDashboardAuthCookieOptions(new Date(Date.now() + 10 * 1000)),
     });
 
     res.status(200).json({
