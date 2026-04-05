@@ -34,6 +34,13 @@ const ecomProductSchema = new mongoose.Schema(
             isTrending: { type: Boolean, default: false },
             score: { type: Number, default: 0 },
         },
+        /** Canonical link to dashboard Product Master (series, unified inventory). */
+        productMasterId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'ProductMaster',
+            default: null,
+            index: true,
+        },
     },
     { timestamps: true }
 );

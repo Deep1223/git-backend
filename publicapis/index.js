@@ -7,6 +7,13 @@ const { postPublicSubcategories } = require('./catalogSubcategories');
 const { postPublicProducts } = require('./catalogProducts');
 const { postPublicTopStyles } = require('./topStyles');
 const { postPublicStoreSettings } = require('./storeSettings');
+const {
+    postPublicCmsContact,
+    postPublicCmsFaq,
+    postPublicCmsShipping,
+    postPublicCmsReturns,
+} = require('./cmsSupport');
+const { postPublicOccasions } = require('./occasionsPublic');
 
 module.exports = {
     postPublicCategories,
@@ -14,4 +21,9 @@ module.exports = {
     postPublicProducts,
     postPublicTopStyles,
     postPublicStoreSettings,
+    postPublicCmsContact,
+    postPublicCmsFaq,
+    postPublicCmsShipping,
+    postPublicCmsReturns,
+    postPublicOccasions,
 };

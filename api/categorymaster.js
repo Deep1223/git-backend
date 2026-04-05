@@ -1,5 +1,13 @@
 const CategoryMaster = require('../modal/categorymaster');
 
+function normalizeCategoryBody(body) {
+    const b = body && typeof body === 'object' ? { ...body } : {};
+    if (Object.prototype.hasOwnProperty.call(b, 'categoryimage')) {
+        b.categoryimage = b.categoryimage == null ? '' : String(b.categoryimage).trim();
+    }
+    return b;
+}
+
 // Get all categories (pagination, sort, filter, search, projection)
 exports.getAllCategories = async (req, res) => {
     try {
@@ -136,6 +144,7 @@ exports.getCategoryById = async (req, res) => {
 // Create new category
 exports.createCategory = async (req, res) => {
     try {
+        Object.assign(req.body, normalizeCategoryBody(req.body));
         // Set recordinfo automatically for create only
         req.body.recordinfo = {
             createby: req.user ? req.user.username : 'system'
@@ -172,6 +181,16 @@ exports.updateCategory = async (req, res) => {
                 message: 'Category not found'
             });
         }
+
+        // Prevent updating default categories
+        if (category.defaultdata === true) {
+            return res.status(403).json({
+                success: false,
+                message: 'Default categories cannot be updated'
+            });
+        }
+
+        Object.assign(req.body, normalizeCategoryBody(req.body));
 
         // Update recordinfo.updateby
         if (!req.body.recordinfo) req.body.recordinfo = {};
@@ -249,6 +268,18 @@ exports.deleteCategory = async (req, res) => {
 
         // Handle legacy single string ID or array of IDs
         const idsToDelete = Array.isArray(idData) ? idData : [idData];
+        
+        // If single ID, check if it's default
+        if (idsToDelete.length === 1) {
+            const cat = await CategoryMaster.findById(idsToDelete[0]);
+            if (cat?.defaultdata === true) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Default categories cannot be deleted'
+                });
+            }
+        }
+
         await CategoryMaster.deleteMany({ 
             _id: { $in: idsToDelete },
             defaultdata: { $ne: true }

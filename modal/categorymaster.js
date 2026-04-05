@@ -11,9 +11,18 @@ const categoryMasterSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    categoryimage: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     status: {
         type: Number,
         default: 1
+    },
+    defaultdata: {
+        type: Boolean,
+        default: false
     },
     recordinfo: {
         createat: { type: Date, default: Date.now },

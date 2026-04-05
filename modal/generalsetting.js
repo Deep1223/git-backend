@@ -21,6 +21,9 @@ const heroSlideSchema = new mongoose.Schema(
         caption: { type: String, trim: true, default: '' },
         cta: { type: String, trim: true, default: '' },
         href: { type: String, trim: true, default: '' },
+        buyOneGetOneFree: { type: Boolean, default: false },
+        /** 1–99 = CTA links to /promo?discount=n; 0 or omit = ignore */
+        discountUpTo: { type: Number, default: 0 },
     },
     { _id: false }
 );
@@ -46,6 +49,8 @@ const generalSettingSchema = new mongoose.Schema({
     },
     /** Applied when defaultCurrency is not INR (percentage markup on displayed prices). */
     otherCurrencyPriceIncreasePercent: { type: Number, default: 0 },
+    /** Spin-to-win popup: minimum days between prompts (storefront). */
+    spin_popup_frequency_days: { type: Number, default: 1, min: 1 },
     timezone: { type: String, trim: true, default: 'Asia/Kolkata' },
     taxRate: { type: Number, default: 0 },
 
@@ -88,6 +93,7 @@ const generalSettingSchema = new mongoose.Schema({
     facebookUrl: { type: String, trim: true, default: '' },
     twitterUrl: { type: String, trim: true, default: '' },
     youtubeUrl: { type: String, trim: true, default: '' },
+    pinterestUrl: { type: String, trim: true, default: '' },
 
     paymentVisa: { type: Number, default: 1 },
     paymentMastercard: { type: Number, default: 1 },

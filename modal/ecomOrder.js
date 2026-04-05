@@ -16,6 +16,10 @@ const ecomOrderSchema = new mongoose.Schema(
         user: { type: mongoose.Schema.Types.ObjectId, ref: 'EcomUser', default: null, index: true },
         sessionId: { type: String, default: null, index: true },
         items: { type: [orderItemSchema], default: [] },
+        /** Subtotal before promo (sum of line items); kept for records when a coupon is used */
+        subtotalAmount: { type: Number, min: 0, default: 0 },
+        promoCode: { type: String, default: '', trim: true },
+        discountAmount: { type: Number, min: 0, default: 0 },
         totalAmount: { type: Number, min: 0, required: true },
         paymentStatus: {
             type: String,

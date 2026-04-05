@@ -1,5 +1,6 @@
 const User = require('../modal/user');
 const { moveToPermanent, deleteFromS3 } = require('../utils/s3');
+const { notifyAllAdmins, initialsFrom } = require('../lib/adminNotify');
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
@@ -150,6 +151,22 @@ exports.createUser = async (req, res) => {
             .populate('stateid', 'state')
             .populate('countryid', 'country');
             
+        const displayName = `${populatedUser.firstname || ''} ${populatedUser.lastname || ''}`.trim() || populatedUser.username;
+        notifyAllAdmins({
+            type: 'user_created',
+            boldName: displayName,
+            text: `New user — ${displayName} was added`,
+            name: displayName,
+            body: `A dashboard user account was created by ${req.user?.username || 'admin'}.`,
+            boldTag: 'new account',
+            subDesc: populatedUser.email || '',
+            tag: 'User Master',
+            sender: req.user?.username || 'Admin',
+            initials: initialsFrom(displayName),
+            redirectPath: '/usermaster',
+            meta: { userId: String(populatedUser._id) },
+        });
+
         res.status(201).json({
             success: true,
             data: populatedUser
@@ -204,6 +221,22 @@ exports.updateUser = async (req, res) => {
         }).populate('cityid', 'city')
          .populate('stateid', 'state')
          .populate('countryid', 'country');
+
+        const displayName = `${updatedUser.firstname || ''} ${updatedUser.lastname || ''}`.trim() || updatedUser.username;
+        notifyAllAdmins({
+            type: 'profile_updated',
+            boldName: displayName,
+            text: `${displayName} — profile was updated`,
+            name: displayName,
+            body: `User profile was saved by ${req.user?.username || 'admin'}. Review User Master for pending approvals if your process requires them.`,
+            boldTag: 'profile update',
+            subDesc: `by ${req.user?.username || 'admin'}`,
+            tag: 'User Master',
+            sender: req.user?.username || 'Admin',
+            initials: initialsFrom(displayName),
+            redirectPath: '/usermaster',
+            meta: { userId: String(updatedUser._id) },
+        });
 
         res.status(200).json({
             success: true,

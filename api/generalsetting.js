@@ -76,6 +76,7 @@ const SEARCH_TEXT_FIELDS = [
     'facebookUrl',
     'twitterUrl',
     'youtubeUrl',
+    'pinterestUrl',
     'urlCompanyAbout',
     'urlCompanyStory',
     'urlCompanyStores',
@@ -134,6 +135,9 @@ function normalizeBody(body) {
 
     b.taxRate = toFloat(b.taxRate, 0);
     b.otherCurrencyPriceIncreasePercent = toFloat(b.otherCurrencyPriceIncreasePercent, 0);
+    let spinFreq = Math.floor(toNum(b.spin_popup_frequency_days, 1));
+    if (!Number.isFinite(spinFreq) || spinFreq < 1) spinFreq = 1;
+    b.spin_popup_frequency_days = spinFreq;
     b.showTopBanner = to01(b.showTopBanner);
     b.showSecondaryBanner = to01(b.showSecondaryBanner);
     b.newsletterEnabled = to01(b.newsletterEnabled);
@@ -171,6 +175,16 @@ function normalizeBody(body) {
     if (!Array.isArray(b.heroSlides)) b.heroSlides = [];
     b.heroSlides = b.heroSlides.map((row) => {
         const r = row && typeof row === 'object' ? { ...row } : {};
+        const bogo =
+            r.buyOneGetOneFree === true ||
+            r.buyOneGetOneFree === 1 ||
+            r.buyOneGetOneFree === '1' ||
+            String(r.buyOneGetOneFree || '').toLowerCase() === 'true';
+        let disc = Number(r.discountUpTo);
+        if (!Number.isFinite(disc)) disc = 0;
+        disc = Math.floor(disc);
+        if (disc < 0) disc = 0;
+        if (disc > 99) disc = 99;
         return {
             image: r.image != null ? String(r.image).trim() : '',
             title: r.title != null ? String(r.title).trim() : '',
@@ -178,6 +192,8 @@ function normalizeBody(body) {
             caption: r.caption != null ? String(r.caption).trim() : '',
             cta: r.cta != null ? String(r.cta).trim() : '',
             href: r.href != null ? String(r.href).trim() : '',
+            buyOneGetOneFree: Boolean(bogo),
+            discountUpTo: disc,
         };
     });
 

@@ -1,6 +1,6 @@
 const EcomStorefrontSection = require('../../modal/ecomStorefrontSection');
 const EcomProduct = require('../../modal/ecomProduct');
-const { loadProductsByIds, mapProductPublic } = require('./helpers');
+const { loadProductsByIds, mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
 
 const SECTION_KEYS = ['top-styles', 'trending', 'recommended', 'new-arrivals'];
 
@@ -9,19 +9,62 @@ async function buildAutoProducts(sectionKey, ruleConfig = {}) {
     const minStock = Math.max(0, Number(ruleConfig.minStock || 1));
     const common = { hidden: { $ne: true }, stock: { $gte: minStock } };
 
-    if (sectionKey === 'top-styles') {
-        return EcomProduct.find(common).sort({ recentSalesCount: -1, updatedAt: -1 }).limit(limit).lean();
+    const pop = (q) =>
+        q.populate('category', 'name slug').populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT);
+
+    if (sectionKey === 'trending' || sectionKey === 'recommended' || sectionKey === 'top-styles') {
+        const manualKey = 
+            sectionKey === 'trending' ? 'trendingProducts' : 
+            sectionKey === 'recommended' ? 'recommendedProducts' : 
+            'topStylesProducts';
+
+        const pipeline = [
+            { $match: common },
+            {
+                $lookup: {
+                    from: 'productmasters',
+                    localField: 'productMasterId',
+                    foreignField: '_id',
+                    as: 'pm',
+                },
+            },
+            { $unwind: { path: '$pm', preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    isManual: {
+                        $cond: {
+                            if: {
+                                $in: [
+                                    manualKey,
+                                    { $ifNull: ['$pm.storefrontHomeSectionKeys', []] },
+                                ],
+                            },
+                            then: 1,
+                            else: 0,
+                        },
+                    },
+                    hasProductMaster: { $cond: [{ $ifNull: ['$productMasterId', false] }, 1, 0] }
+                },
+            },
+            {
+                $sort: {
+                    isManual: -1,
+                    hasProductMaster: -1,
+                    recentSalesCount: -1,
+                    'metadata.score': -1,
+                    views: -1,
+                    updatedAt: -1,
+                },
+            },
+            { $limit: limit },
+        ];
+        const docs = await EcomProduct.aggregate(pipeline);
+        return EcomProduct.populate(docs, [
+            { path: 'category', select: 'name slug' },
+            { path: 'productMasterId', select: PRODUCT_MASTER_PUBLIC_SELECT },
+        ]);
     }
-    if (sectionKey === 'trending') {
-        return EcomProduct.find(common)
-            .sort({ views: -1, recentSalesCount: -1, updatedAt: -1 })
-            .limit(limit)
-            .lean();
-    }
-    if (sectionKey === 'recommended') {
-        return EcomProduct.find(common).sort({ 'metadata.score': -1, updatedAt: -1 }).limit(limit).lean();
-    }
-    return EcomProduct.find(common).sort({ createdAt: -1 }).limit(limit).lean();
+    return pop(EcomProduct.find(common).sort({ createdAt: -1 }).limit(limit)).lean();
 }
 
 async function getSection(sectionKey) {

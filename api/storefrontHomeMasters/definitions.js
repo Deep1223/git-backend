@@ -1,5 +1,34 @@
 const { toStr, toNum, splitList, parseObjectIdList, mapRowHelpers } = require('./helpers');
 
+function toFeatureRow(row) {
+    const title = toStr(row?.featureTitle ?? row?.title);
+    const description = toStr(row?.featureDescription ?? row?.description);
+    const threshold = toNum(row?.featureThreshold ?? row?.freeShippingThresholdInr, 0);
+    const next = { title, description };
+    if (threshold > 0) next.freeShippingThresholdInr = threshold;
+    return next;
+}
+
+function readFeatures(section = {}) {
+    const source = Array.isArray(section.features) ? section.features : [];
+    return source
+        .map((row) => ({
+            featureTitle: toStr(row?.title),
+            featureDescription: toStr(row?.description),
+            featureThreshold: row?.freeShippingThresholdInr ?? '',
+        }))
+        .filter((row) => row.featureTitle || row.featureDescription || row.featureThreshold);
+}
+
+function writeFeatures(body = {}) {
+    const rows = Array.isArray(body.features)
+        ? body.features
+        : [1, 2, 3, 4].map((index) => mapRowHelpers.writeFeature(body, index));
+    return rows
+        .map((row) => toFeatureRow(row))
+        .filter((row) => row.title || row.description || row.freeShippingThresholdInr);
+}
+
 const DEFS = {
     storefrontdemifinemaster: {
         cmsKey: 'demifineSection',
@@ -8,36 +37,24 @@ const DEFS = {
             title: toStr(section.title),
             description: toStr(section.description),
             ctaText: toStr(section?.cta?.text),
-            ctaHref: toStr(section?.cta?.href),
+            ctaHref: '/promo?section=demiFineJewelleryProducts',
         }),
         write: (body) => ({
             subtitle: toStr(body.subtitle),
             title: toStr(body.title),
             description: toStr(body.description),
-            cta: { text: toStr(body.ctaText), href: toStr(body.ctaHref) },
-        }),
-    },
-    storefronttopstylesmaster: {
-        cmsKey: 'topStylesSection',
-        read: (section = {}) => ({
-            title: toStr(section.title),
-            categories: Array.isArray(section.categories) ? section.categories.join('\n') : '',
-            discount: toNum(section.discount, 0),
-            categoryid: section.categoryid != null ? String(section.categoryid) : '',
-            category: toStr(section.category),
-            productIds: Array.isArray(section.productIds) ? section.productIds.join('\n') : '',
-        }),
-        write: (body) => ({
-            title: toStr(body.title),
-            categories: splitList(body.categories),
-            discount: toNum(body.discount, 0),
-            categoryid: toStr(body.categoryid),
-            category: toStr(body.category),
-            productIds: parseObjectIdList(body.productIds, 50),
+            cta: { text: toStr(body.ctaText), href: '/promo?section=demiFineJewelleryProducts' },
         }),
     },
     storefrontdiscountbannermaster: {
         cmsKey: 'discountBanner',
+        readDiscountUpTo: (section = {}) => {
+            const direct = toNum(section.discountUpTo, 0);
+            if (direct > 0) return direct;
+            const href = toStr(section.href);
+            const m = href.match(/discount=(\d{1,2})/i);
+            return m ? toNum(m[1], 0) : 0;
+        },
         read: (section = {}) => ({
             image: toStr(section.image),
             alt: toStr(section.alt),
@@ -45,7 +62,7 @@ const DEFS = {
             title: toStr(section.title),
             description: toStr(section.description),
             cta: toStr(section.cta),
-            href: toStr(section.href),
+            discountUpTo: DEFS.storefrontdiscountbannermaster.readDiscountUpTo(section),
         }),
         write: (body) => ({
             image: toStr(body.image),
@@ -54,7 +71,7 @@ const DEFS = {
             title: toStr(body.title),
             description: toStr(body.description),
             cta: toStr(body.cta),
-            href: toStr(body.href),
+            discountUpTo: Math.max(0, Math.min(99, toNum(body.discountUpTo, 0))),
         }),
     },
     storefrontshopbyrecipientmaster: {
@@ -74,20 +91,16 @@ const DEFS = {
     storefrontforeveryyoumaster: {
         cmsKey: 'forEveryYou',
         read: (section = {}) => ({
+            eyebrow: toStr(section.eyebrow),
             title: toStr(section.title),
             description: toStr(section.description),
-            ...mapRowHelpers.readOccasion(section, 1),
-            ...mapRowHelpers.readOccasion(section, 2),
-            ...mapRowHelpers.readOccasion(section, 3),
+            ornament: toStr(section.ornament),
         }),
         write: (body) => ({
+            eyebrow: toStr(body.eyebrow),
             title: toStr(body.title),
             description: toStr(body.description),
-            occasions: [
-                mapRowHelpers.writeOccasion(body, 1),
-                mapRowHelpers.writeOccasion(body, 2),
-                mapRowHelpers.writeOccasion(body, 3),
-            ].filter((row) => row.title || row.subtitle || row.image || row.href),
+            ornament: toStr(body.ornament),
         }),
     },
     storefrontfinegoldmaster: {
@@ -171,25 +184,11 @@ const DEFS = {
         cmsKey: 'shopWithConfidence',
         read: (section = {}) => ({
             title: toStr(section.title),
-            ...mapRowHelpers.readFeature(section, 1),
-            ...mapRowHelpers.readFeature(section, 2),
-            ...mapRowHelpers.readFeature(section, 3),
-            ...mapRowHelpers.readFeature(section, 4),
+            features: readFeatures(section),
         }),
         write: (body) => ({
             title: toStr(body.title),
-            features: [
-                mapRowHelpers.writeFeature(body, 1),
-                mapRowHelpers.writeFeature(body, 2),
-                mapRowHelpers.writeFeature(body, 3),
-                mapRowHelpers.writeFeature(body, 4),
-            ]
-                .filter((row) => row.title || row.description || row.freeShippingThresholdInr)
-                .map((row) => {
-                    const next = { title: row.title, description: row.description };
-                    if (row.freeShippingThresholdInr) next.freeShippingThresholdInr = row.freeShippingThresholdInr;
-                    return next;
-                }),
+            features: writeFeatures(body),
         }),
     },
     storefrontbrandstorymaster: {

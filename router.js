@@ -22,21 +22,76 @@ const {
 } = require('./api/productmaster');
 const { getAllSubCategories, getSubCategoryById, createSubCategory, updateSubCategory, deleteSubCategory } = require('./api/subcategorymaster');
 const {
+    getAllOccasions,
+    getOccasionById,
+    createOccasion,
+    updateOccasion,
+    deleteOccasion,
+} = require('./api/occasionmaster');
+const {
     getAllGeneralSettings,
     getGeneralSettingById,
     createGeneralSetting,
     updateGeneralSetting,
     deleteGeneralSetting,
 } = require('./api/generalsetting');
+const {
+    getAllStorefrontReviews,
+    getStorefrontReviewById,
+    createStorefrontReview,
+    updateStorefrontReview,
+    deleteStorefrontReview,
+    postPublicProductReviews,
+    submitPublicProductReview,
+} = require('./api/storefrontreviewsmaster');
+const {
+    getAllSpinLogs,
+    getSpinLogById,
+    createSpinLog,
+    updateSpinLog,
+    deleteSpinLog,
+} = require('./api/spinlogmaster');
 const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
-const {signup, login, logout, googleLogin, forgotPassword, resetPassword, getMe, setup2FA, verify2FA, toggle2FA} = require('./api/auth');
+const {
+    signup,
+    login,
+    logout,
+    googleLogin,
+    forgotPassword,
+    resetPassword,
+    getMe,
+    setup2FA,
+    verify2FA,
+    toggle2FA,
+    updateProfile,
+    changePassword,
+    getLoginSessions,
+    removeLoginSession,
+    getMyActivity,
+} = require('./api/auth');
+const { submitFeedback } = require('./api/feedback');
 const { protect } = require('./middleware/auth');
 
 const audit = require('./middleware/audit');
 
 const {getAllUsers, getUserById, createUser, updateUser, deleteUser} = require('./api/usermaster');
 const { getConfig } = require('./api/config');
+const { listNotifications, markNotificationRead, markAllRead } = require('./api/adminNotifications');
+const { getStoreInventorySettings, updateStoreInventorySettings } = require('./api/storeInventorySettings');
+const { checkSpin, spin } = require('./api/spin');
+const { getSettings, updateSettings } = require('./api/settings');
+const {
+    postPublicSidebarMenu,
+    getSidebarMenuMaster,
+    createSidebarMenuCategory,
+    updateSidebarMenuCategory,
+    deleteSidebarMenuCategory,
+    reorderSidebarMenuSections,
+    toggleSidebarMenuVisibility,
+} = require('./api/sidebarMenu');
+const { validatePromo } = require('./api/promoValidate');
+const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
 const {
     postPublicCategories,
@@ -44,7 +99,41 @@ const {
     postPublicProducts,
     postPublicTopStyles,
     postPublicStoreSettings,
+    postPublicCmsContact,
+    postPublicCmsFaq,
+    postPublicCmsShipping,
+    postPublicCmsReturns,
+    postPublicOccasions,
 } = require('./publicapis');
+
+const {
+    getAllCmsContact,
+    getCmsContactById,
+    createCmsContact,
+    updateCmsContact,
+    deleteCmsContact,
+} = require('./api/cmsContact');
+const {
+    getAllCmsFaq,
+    getCmsFaqById,
+    createCmsFaq,
+    updateCmsFaq,
+    deleteCmsFaq,
+} = require('./api/cmsFaq');
+const {
+    getAllCmsShipping,
+    getCmsShippingById,
+    createCmsShipping,
+    updateCmsShipping,
+    deleteCmsShipping,
+} = require('./api/cmsShipping');
+const {
+    getAllCmsReturns,
+    getCmsReturnsById,
+    createCmsReturns,
+    updateCmsReturns,
+    deleteCmsReturns,
+} = require('./api/cmsReturns');
 
 // Auth Routes
 router.route('/auth/signup').post(signup);
@@ -53,10 +142,16 @@ router.route('/auth/logout').get(logout);
 router.route('/auth/google').post(googleLogin);
 router.route('/auth/forgotpassword').post(forgotPassword);
 router.route('/auth/resetpassword').post(resetPassword);
-router.route('/auth/me').get(getMe);
+router.route('/auth/me').get(protect, getMe);
+router.route('/auth/profile').put(protect, audit('UPDATE', 'User'), updateProfile);
+router.route('/auth/password').put(protect, audit('UPDATE', 'User'), changePassword);
+router.route('/auth/sessions').get(protect, getLoginSessions);
+router.route('/auth/sessions/:id').delete(protect, audit('UPDATE', 'User'), removeLoginSession);
+router.route('/auth/activity').get(protect, getMyActivity);
+router.route('/auth/feedback').post(protect, submitFeedback);
 router.route('/auth/2fa/setup').post(setup2FA); // Removed protect for login flow support
 router.route('/auth/2fa/verify').post(verify2FA); // Removed protect for login flow support
-router.route('/auth/2fa').put(protect, toggle2FA);
+router.route('/auth/2fa').put(protect, audit('2FA_TOGGLE', 'User'), toggle2FA);
 
 // Generate Usercode Routes
 router.route('/generateusercode').get(generateUsercode).post(generateUsercode);
@@ -144,6 +239,13 @@ router.route('/productmaster/update').post(protect, audit('UPDATE', 'Product'), 
 router.route('/productmaster/delete').post(protect, audit('DELETE', 'Product'), deleteProduct);
 router.route('/productmaster/:id').get(protect, getProductById);
 
+// Occasion Master Routes
+router.route('/occasionmaster').post(protect, getAllOccasions).get(protect, getAllOccasions);
+router.route('/occasionmaster/create').post(protect, audit('CREATE', 'Occasion'), createOccasion);
+router.route('/occasionmaster/update').post(protect, audit('UPDATE', 'Occasion'), updateOccasion);
+router.route('/occasionmaster/delete').post(protect, audit('DELETE', 'Occasion'), deleteOccasion);
+router.route('/occasionmaster/:id').get(protect, getOccasionById);
+
 // Sub Category Master Routes
 router.route('/subcategorymaster').post(protect, getAllSubCategories).get(protect, getAllSubCategories);
 router.route('/subcategorymaster/create').post(protect, audit('CREATE', 'SubCategory'), createSubCategory);
@@ -158,8 +260,40 @@ router.route('/generalsetting/update').post(protect, audit('UPDATE', 'GeneralSet
 router.route('/generalsetting/delete').post(protect, audit('DELETE', 'GeneralSetting'), deleteGeneralSetting);
 router.route('/generalsetting/:id').get(protect, getGeneralSettingById);
 
+// Storefront Reviews Master (read-only in dashboard; data comes from storefront submissions)
+router.route('/storefrontreviewsmaster').post(protect, getAllStorefrontReviews).get(protect, getAllStorefrontReviews);
+router.route('/storefrontreviewsmaster/create').post(protect, audit('CREATE', 'StorefrontReview'), createStorefrontReview);
+router.route('/storefrontreviewsmaster/update').post(protect, audit('UPDATE', 'StorefrontReview'), updateStorefrontReview);
+router.route('/storefrontreviewsmaster/delete').post(protect, audit('DELETE', 'StorefrontReview'), deleteStorefrontReview);
+router.route('/storefrontreviewsmaster/:id').get(protect, getStorefrontReviewById);
+
+// Spin log (read-only dashboard — data from storefront spin-to-win)
+router.route('/spinlogmaster').post(protect, getAllSpinLogs).get(protect, getAllSpinLogs);
+router.route('/spinlogmaster/create').post(protect, audit('CREATE', 'SpinLog'), createSpinLog);
+router.route('/spinlogmaster/update').post(protect, audit('UPDATE', 'SpinLog'), updateSpinLog);
+router.route('/spinlogmaster/delete').post(protect, audit('DELETE', 'SpinLog'), deleteSpinLog);
+router.route('/spinlogmaster/:id').get(protect, getSpinLogById);
+
 // Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
 registerStorefrontHomeMasters(router, { protect, audit });
+
+// Admin notifications (dashboard header — cookie/Bearer auth)
+router.get('/notifications', protect, listNotifications);
+router.patch('/notifications/:id/read', protect, markNotificationRead);
+router.post('/notifications/mark-all-read', protect, markAllRead);
+
+// Store inventory — low stock threshold (e-com catalog + jobs + dashboard KPI)
+router.get('/store-inventory-settings', protect, getStoreInventorySettings);
+router.put('/store-inventory-settings', protect, audit('UPDATE', 'StoreInventorySettings'), updateStoreInventorySettings);
+
+// E-com catalog — low-stock list + stock edits (dashboard auth; must be registered before /ecom router)
+router.get('/ecom/admin/low-stock-products', protect, adminLowStockCatalog.listLowStockCatalogProducts);
+router.patch(
+    '/ecom/admin/low-stock-products/:id',
+    protect,
+    audit('UPDATE', 'EcomProduct'),
+    adminLowStockCatalog.patchLowStockCatalogProductStock
+);
 
 // Config Route
 router.get('/config', getConfig); // Public access for app config
@@ -169,8 +303,60 @@ router.post('/config', getConfig); // Support POST for email/password authentica
 router.post('/public/categories', postPublicCategories);
 router.post('/public/subcategories', postPublicSubcategories);
 router.post('/public/products', postPublicProducts);
+router.post('/public/occasions', postPublicOccasions);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
+router.post('/public/sidebar-menu', postPublicSidebarMenu);
+router.post('/public/product-reviews', postPublicProductReviews);
+router.post('/public/product-reviews/submit', submitPublicProductReview);
+router.post('/public/cms-contact', postPublicCmsContact);
+router.post('/public/cms-faq', postPublicCmsFaq);
+router.post('/public/cms-shipping', postPublicCmsShipping);
+router.post('/public/cms-returns', postPublicCmsReturns);
+
+// Storefront promo (spin coupons + static codes) — no auth
+router.post('/promo/validate', validatePromo);
+
+// Spin to win (backend-controlled popup visibility + spin result)
+router.post('/check-spin', checkSpin);
+router.post('/spin', spin);
+
+// Popup frequency settings (GET = public; PUT = admin dashboard)
+router.get('/settings', getSettings);
+router.put('/settings', protect, audit('UPDATE', 'Settings'), updateSettings);
+
+// Sidebar menu master (dashboard auth)
+router.post('/sidebarmenu', protect, getSidebarMenuMaster);
+router.post('/sidebarmenu/category/create', protect, audit('CREATE', 'SidebarMenuCategory'), createSidebarMenuCategory);
+router.post('/sidebarmenu/category/update', protect, audit('UPDATE', 'SidebarMenuCategory'), updateSidebarMenuCategory);
+router.post('/sidebarmenu/category/delete', protect, audit('DELETE', 'SidebarMenuCategory'), deleteSidebarMenuCategory);
+router.post('/sidebarmenu/sections/reorder', protect, audit('UPDATE', 'SidebarMenuSection'), reorderSidebarMenuSections);
+router.post('/sidebarmenu/visibility/toggle', protect, audit('UPDATE', 'SidebarMenuVisibility'), toggleSidebarMenuVisibility);
+
+// CMS support pages (dashboard)
+router.route('/cmscontact').post(protect, getAllCmsContact).get(protect, getAllCmsContact);
+router.route('/cmscontact/create').post(protect, audit('CREATE', 'CmsContact'), createCmsContact);
+router.route('/cmscontact/update').post(protect, audit('UPDATE', 'CmsContact'), updateCmsContact);
+router.route('/cmscontact/delete').post(protect, audit('DELETE', 'CmsContact'), deleteCmsContact);
+router.route('/cmscontact/:id').get(protect, getCmsContactById);
+
+router.route('/cmsfaq').post(protect, getAllCmsFaq).get(protect, getAllCmsFaq);
+router.route('/cmsfaq/create').post(protect, audit('CREATE', 'CmsFaq'), createCmsFaq);
+router.route('/cmsfaq/update').post(protect, audit('UPDATE', 'CmsFaq'), updateCmsFaq);
+router.route('/cmsfaq/delete').post(protect, audit('DELETE', 'CmsFaq'), deleteCmsFaq);
+router.route('/cmsfaq/:id').get(protect, getCmsFaqById);
+
+router.route('/cmsshipping').post(protect, getAllCmsShipping).get(protect, getAllCmsShipping);
+router.route('/cmsshipping/create').post(protect, audit('CREATE', 'CmsShipping'), createCmsShipping);
+router.route('/cmsshipping/update').post(protect, audit('UPDATE', 'CmsShipping'), updateCmsShipping);
+router.route('/cmsshipping/delete').post(protect, audit('DELETE', 'CmsShipping'), deleteCmsShipping);
+router.route('/cmsshipping/:id').get(protect, getCmsShippingById);
+
+router.route('/cmsreturns').post(protect, getAllCmsReturns).get(protect, getAllCmsReturns);
+router.route('/cmsreturns/create').post(protect, audit('CREATE', 'CmsReturns'), createCmsReturns);
+router.route('/cmsreturns/update').post(protect, audit('UPDATE', 'CmsReturns'), updateCmsReturns);
+router.route('/cmsreturns/delete').post(protect, audit('DELETE', 'CmsReturns'), deleteCmsReturns);
+router.route('/cmsreturns/:id').get(protect, getCmsReturnsById);
 
 // New e-commerce REST APIs (auth/products/cart/orders/storefront/recommendations)
 router.use('/ecom', ecomRouter);

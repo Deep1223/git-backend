@@ -30,6 +30,21 @@ const productMasterSchema = new mongoose.Schema({
         type: Number,
         required: [true, 'Original price is required']
     },
+    /** Storefront promo listing: /promo?offer=bogo */
+    buyOneGetOneFree: {
+        type: Boolean,
+        default: false,
+    },
+    /** Legacy boolean mirror for 925 SILVER POST (source of truth: storefrontHomeSectionKeys). */
+    showIn925SilverPost: {
+        type: Boolean,
+        default: false,
+    },
+    /** Dashboard: which Orinket homepage sections this product is associated with (marketing / merchandising). */
+    storefrontHomeSectionKeys: {
+        type: [String],
+        default: [],
+    },
     categoryid: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'CategoryMaster',
@@ -46,6 +61,15 @@ const productMasterSchema = new mongoose.Schema({
     subcategory: {
         type: String,
         trim: true
+    },
+    /** Occasion Master (multi-select); denormalized labels in `occasions` for search/display. */
+    occasionids: {
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'OccasionMaster' }],
+        default: [],
+    },
+    occasions: {
+        type: [String],
+        default: [],
     },
     images: {
         type: [String],
@@ -87,6 +111,11 @@ const productMasterSchema = new mongoose.Schema({
         trim: true,
         default: ''
     },
+    gender: {
+        type: String,
+        enum: ['Man', 'Woman', 'Both'],
+        default: 'Both'
+    },
     details: {
         type: String,
         trim: true,
@@ -127,7 +156,9 @@ productMasterSchema.pre('save', async function () {
             this.productseries = await allocateNextProductSeriesCode();
         }
     } else {
-        if (this.isModified('productseries')) {
+        if (!this.productseries || !String(this.productseries).trim()) {
+            this.productseries = await allocateNextProductSeriesCode();
+        } else if (this.isModified('productseries')) {
             const existing = await this.constructor.findById(this._id).select('productseries').lean();
             if (existing?.productseries) {
                 this.productseries = existing.productseries;

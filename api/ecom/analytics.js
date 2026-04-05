@@ -1,9 +1,11 @@
 const EcomAnalytics = require('../../modal/ecomAnalytics');
 const EcomOrder = require('../../modal/ecomOrder');
 const EcomProduct = require('../../modal/ecomProduct');
+const { getLowStockThreshold } = require('../../modal/storeInventorySettings');
 
 exports.getDashboardSummary = async (_req, res) => {
     try {
+        const lowStockThreshold = await getLowStockThreshold();
         const [ordersAgg, topProducts, lowStockCount, analyticsRecent] = await Promise.all([
             EcomOrder.aggregate([
                 { $match: { paymentStatus: { $in: ['pending', 'paid'] } } },
@@ -20,7 +22,7 @@ exports.getDashboardSummary = async (_req, res) => {
                 .limit(5)
                 .select('name images stock recentSalesCount')
                 .lean(),
-            EcomProduct.countDocuments({ stock: { $lt: Number(process.env.LOW_STOCK_THRESHOLD || 5) }, hidden: { $ne: true } }),
+            EcomProduct.countDocuments({ stock: { $lt: lowStockThreshold }, hidden: { $ne: true } }),
             EcomAnalytics.find().sort({ date: -1 }).limit(7).lean(),
         ]);
 
@@ -38,6 +40,7 @@ exports.getDashboardSummary = async (_req, res) => {
                     soldUnits: p.recentSalesCount || 0,
                 })),
                 lowStockCount,
+                lowStockThreshold,
                 analyticsLast7Days: analyticsRecent.reverse(),
                 tooltip: 'Based on last 7 days sales',
             },

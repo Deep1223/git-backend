@@ -1,6 +1,6 @@
 const EcomOrder = require('../../modal/ecomOrder');
 const EcomProduct = require('../../modal/ecomProduct');
-const { mapProductPublic } = require('./helpers');
+const { mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
 
 const FREE_SHIPPING_THRESHOLD = Number(process.env.FREE_SHIPPING_THRESHOLD || 2999);
 
@@ -12,6 +12,7 @@ async function fetchPublicProductsByIds(ids, limit = 8) {
         stock: { $gt: 0 },
     })
         .populate('category', 'name slug')
+        .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
         .limit(limit)
         .lean();
     return docs.map(mapProductPublic);
@@ -40,10 +41,14 @@ exports.frequentlyBoughtTogether = async (req, res) => {
 exports.similarProducts = async (req, res) => {
     try {
         const productId = String(req.query.productId || req.body?.productId || '');
-        const product = await EcomProduct.findById(productId).populate('category', 'slug').lean();
+        const product = await EcomProduct.findById(productId)
+            .populate('category', 'slug')
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
+            .lean();
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-        const min = Math.max(0, product.price * 0.7);
-        const max = product.price * 1.3;
+        const refPrice = mapProductPublic(product).price;
+        const min = Math.max(0, refPrice * 0.7);
+        const max = refPrice * 1.3;
         const docs = await EcomProduct.find({
             _id: { $ne: product._id },
             category: product.category?._id,
@@ -53,6 +58,7 @@ exports.similarProducts = async (req, res) => {
             stock: { $gt: 0 },
         })
             .populate('category', 'name slug')
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
             .limit(8)
             .lean();
         return res.status(200).json({ success: true, data: docs.map(mapProductPublic) });
@@ -70,7 +76,9 @@ exports.completeTheLook = async (req, res) => {
             earrings: ['necklace', 'ring'],
             bracelet: ['ring', 'necklace'],
         };
-        const product = await EcomProduct.findById(productId).lean();
+        const product = await EcomProduct.findById(productId)
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
+            .lean();
         if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
         const nextTags = (product.tags || []).flatMap((tag) => relations[tag] || []);
         if (!nextTags.length) return res.status(200).json({ success: true, data: [] });
@@ -81,6 +89,7 @@ exports.completeTheLook = async (req, res) => {
             stock: { $gt: 0 },
         })
             .populate('category', 'name slug')
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
             .limit(8)
             .lean();
         return res.status(200).json({ success: true, data: docs.map(mapProductPublic) });
@@ -99,6 +108,7 @@ exports.cartUpsell = async (req, res) => {
             price: { $lte: Math.max(missingAmount + 500, 1000) },
         })
             .populate('category', 'name slug')
+            .populate('productMasterId', PRODUCT_MASTER_PUBLIC_SELECT)
             .sort({ price: 1 })
             .limit(8)
             .lean();
