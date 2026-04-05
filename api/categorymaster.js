@@ -1,5 +1,13 @@
 const CategoryMaster = require('../modal/categorymaster');
 
+function normalizeCategoryBody(body) {
+    const b = body && typeof body === 'object' ? { ...body } : {};
+    if (Object.prototype.hasOwnProperty.call(b, 'categoryimage')) {
+        b.categoryimage = b.categoryimage == null ? '' : String(b.categoryimage).trim();
+    }
+    return b;
+}
+
 // Get all categories (pagination, sort, filter, search, projection)
 exports.getAllCategories = async (req, res) => {
     try {
@@ -136,6 +144,7 @@ exports.getCategoryById = async (req, res) => {
 // Create new category
 exports.createCategory = async (req, res) => {
     try {
+        Object.assign(req.body, normalizeCategoryBody(req.body));
         // Set recordinfo automatically for create only
         req.body.recordinfo = {
             createby: req.user ? req.user.username : 'system'
@@ -180,6 +189,8 @@ exports.updateCategory = async (req, res) => {
                 message: 'Default categories cannot be updated'
             });
         }
+
+        Object.assign(req.body, normalizeCategoryBody(req.body));
 
         // Update recordinfo.updateby
         if (!req.body.recordinfo) req.body.recordinfo = {};

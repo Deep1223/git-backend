@@ -20,6 +20,7 @@ const STRING_SORT_DB_FIELDS = [
     'weight',
     'gender',
 ];
+const SILVER_925_SECTION_KEY = 'showIn925SilverPost';
 
 function normalizeProductBody(body) {
     const b = body && typeof body === 'object' ? { ...body } : {};
@@ -35,19 +36,23 @@ function normalizeProductBody(body) {
             v === '1' ||
             String(v).toLowerCase() === 'true';
     }
-    if (b.showIn925SilverPost !== undefined && b.showIn925SilverPost !== null && b.showIn925SilverPost !== '') {
-        const v = b.showIn925SilverPost;
-        b.showIn925SilverPost =
-            v === true ||
-            v === 1 ||
-            v === '1' ||
-            String(v).toLowerCase() === 'true';
-    }
-
     if (b.storefrontHomeSectionKeys !== undefined) {
-        b.storefrontHomeSectionKeys = Array.isArray(b.storefrontHomeSectionKeys)
+        const normalizedKeys = Array.isArray(b.storefrontHomeSectionKeys)
             ? [...new Set(b.storefrontHomeSectionKeys.map((x) => String(x ?? '').trim()).filter(Boolean))]
             : [];
+        b.storefrontHomeSectionKeys = normalizedKeys;
+        // Keep legacy boolean field in sync for backward compatibility.
+        b.showIn925SilverPost = normalizedKeys.includes(SILVER_925_SECTION_KEY);
+    } else if (b.showIn925SilverPost !== undefined && b.showIn925SilverPost !== null && b.showIn925SilverPost !== '') {
+        // Backward compatibility: if legacy boolean arrives, mirror it to section keys.
+        const v = b.showIn925SilverPost;
+        const asBool = v === true || v === 1 || v === '1' || String(v).toLowerCase() === 'true';
+        b.showIn925SilverPost = asBool;
+        const currentKeys = Array.isArray(b.storefrontHomeSectionKeys) ? b.storefrontHomeSectionKeys : [];
+        const keySet = new Set(currentKeys.map((x) => String(x ?? '').trim()).filter(Boolean));
+        if (asBool) keySet.add(SILVER_925_SECTION_KEY);
+        else keySet.delete(SILVER_925_SECTION_KEY);
+        b.storefrontHomeSectionKeys = [...keySet];
     }
 
     if (b.occasionids !== undefined) {

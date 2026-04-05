@@ -11,6 +11,11 @@ const categoryMasterSchema = new mongoose.Schema({
         type: String,
         trim: true
     },
+    categoryimage: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     status: {
         type: Number,
         default: 1

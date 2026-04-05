@@ -35,7 +35,7 @@ const productMasterSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    /** Storefront: include product in 925 SILVER POST section. */
+    /** Legacy boolean mirror for 925 SILVER POST (source of truth: storefrontHomeSectionKeys). */
     showIn925SilverPost: {
         type: Boolean,
         default: false,

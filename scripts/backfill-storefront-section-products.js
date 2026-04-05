@@ -21,6 +21,7 @@ const ALLOWED_KEYS = new Set([
     'trendingProducts',
     'recommendedProducts',
     'fineGoldProducts',
+    'showIn925SilverPost',
 ]);
 
 async function main() {

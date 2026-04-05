@@ -11,6 +11,10 @@
     "backfill:country-currency:force": "node scripts/backfill-country-currency-codes.js --force",
     "seed:ecom": "node scripts/seed.js",
     "seed:storefront-home": "node scripts/seed-storefront-home-masters.js",
+    "seed:sidebar-menu": "node scripts/seed-sidebar-menu.js",
+    "backfill:sidebar-menu:category-image": "node scripts/backfill-sidebar-menu-category-image.js",
+    "backfill:categorymaster:image": "node scripts/backfill-categorymaster-image.js",
+    "seed:categorymaster:images": "node scripts/seed-categorymaster-images.js",
     "reset:ecom": "node scripts/seed.js",
     "smoke:ecom": "node scripts/smoke-ecom.js",
     "seed:cms-support": "node scripts/seed-cms-support.js"

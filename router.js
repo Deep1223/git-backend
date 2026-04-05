@@ -81,6 +81,15 @@ const { listNotifications, markNotificationRead, markAllRead } = require('./api/
 const { getStoreInventorySettings, updateStoreInventorySettings } = require('./api/storeInventorySettings');
 const { checkSpin, spin } = require('./api/spin');
 const { getSettings, updateSettings } = require('./api/settings');
+const {
+    postPublicSidebarMenu,
+    getSidebarMenuMaster,
+    createSidebarMenuCategory,
+    updateSidebarMenuCategory,
+    deleteSidebarMenuCategory,
+    reorderSidebarMenuSections,
+    toggleSidebarMenuVisibility,
+} = require('./api/sidebarMenu');
 const { validatePromo } = require('./api/promoValidate');
 const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
@@ -297,6 +306,7 @@ router.post('/public/products', postPublicProducts);
 router.post('/public/occasions', postPublicOccasions);
 router.post('/public/top-styles', postPublicTopStyles);
 router.post('/public/store-settings', postPublicStoreSettings);
+router.post('/public/sidebar-menu', postPublicSidebarMenu);
 router.post('/public/product-reviews', postPublicProductReviews);
 router.post('/public/product-reviews/submit', submitPublicProductReview);
 router.post('/public/cms-contact', postPublicCmsContact);
@@ -314,6 +324,14 @@ router.post('/spin', spin);
 // Popup frequency settings (GET = public; PUT = admin dashboard)
 router.get('/settings', getSettings);
 router.put('/settings', protect, audit('UPDATE', 'Settings'), updateSettings);
+
+// Sidebar menu master (dashboard auth)
+router.post('/sidebarmenu', protect, getSidebarMenuMaster);
+router.post('/sidebarmenu/category/create', protect, audit('CREATE', 'SidebarMenuCategory'), createSidebarMenuCategory);
+router.post('/sidebarmenu/category/update', protect, audit('UPDATE', 'SidebarMenuCategory'), updateSidebarMenuCategory);
+router.post('/sidebarmenu/category/delete', protect, audit('DELETE', 'SidebarMenuCategory'), deleteSidebarMenuCategory);
+router.post('/sidebarmenu/sections/reorder', protect, audit('UPDATE', 'SidebarMenuSection'), reorderSidebarMenuSections);
+router.post('/sidebarmenu/visibility/toggle', protect, audit('UPDATE', 'SidebarMenuVisibility'), toggleSidebarMenuVisibility);
 
 // CMS support pages (dashboard)
 router.route('/cmscontact').post(protect, getAllCmsContact).get(protect, getAllCmsContact);
