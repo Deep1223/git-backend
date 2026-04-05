@@ -44,6 +44,13 @@ const {
     postPublicProductReviews,
     submitPublicProductReview,
 } = require('./api/storefrontreviewsmaster');
+const {
+    getAllSpinLogs,
+    getSpinLogById,
+    createSpinLog,
+    updateSpinLog,
+    deleteSpinLog,
+} = require('./api/spinlogmaster');
 const registerStorefrontHomeMasters = require('./routes/storefrontHomeMasters');
 const { getAllModules: getAllMenus, getModuleById: getMenuById, createModule: createMenu, updateModule: updateMenu, deleteModule: deleteMenu} = require('./api/menumaster');
 const {
@@ -72,6 +79,9 @@ const {getAllUsers, getUserById, createUser, updateUser, deleteUser} = require('
 const { getConfig } = require('./api/config');
 const { listNotifications, markNotificationRead, markAllRead } = require('./api/adminNotifications');
 const { getStoreInventorySettings, updateStoreInventorySettings } = require('./api/storeInventorySettings');
+const { checkSpin, spin } = require('./api/spin');
+const { getSettings, updateSettings } = require('./api/settings');
+const { validatePromo } = require('./api/promoValidate');
 const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
 const {
@@ -248,6 +258,13 @@ router.route('/storefrontreviewsmaster/update').post(protect, audit('UPDATE', 'S
 router.route('/storefrontreviewsmaster/delete').post(protect, audit('DELETE', 'StorefrontReview'), deleteStorefrontReview);
 router.route('/storefrontreviewsmaster/:id').get(protect, getStorefrontReviewById);
 
+// Spin log (read-only dashboard — data from storefront spin-to-win)
+router.route('/spinlogmaster').post(protect, getAllSpinLogs).get(protect, getAllSpinLogs);
+router.route('/spinlogmaster/create').post(protect, audit('CREATE', 'SpinLog'), createSpinLog);
+router.route('/spinlogmaster/update').post(protect, audit('UPDATE', 'SpinLog'), updateSpinLog);
+router.route('/spinlogmaster/delete').post(protect, audit('DELETE', 'SpinLog'), deleteSpinLog);
+router.route('/spinlogmaster/:id').get(protect, getSpinLogById);
+
 // Storefront homepage section masters (14 aliases → GeneralSetting.storefrontContentJson)
 registerStorefrontHomeMasters(router, { protect, audit });
 
@@ -286,6 +303,17 @@ router.post('/public/cms-contact', postPublicCmsContact);
 router.post('/public/cms-faq', postPublicCmsFaq);
 router.post('/public/cms-shipping', postPublicCmsShipping);
 router.post('/public/cms-returns', postPublicCmsReturns);
+
+// Storefront promo (spin coupons + static codes) — no auth
+router.post('/promo/validate', validatePromo);
+
+// Spin to win (backend-controlled popup visibility + spin result)
+router.post('/check-spin', checkSpin);
+router.post('/spin', spin);
+
+// Popup frequency settings (GET = public; PUT = admin dashboard)
+router.get('/settings', getSettings);
+router.put('/settings', protect, audit('UPDATE', 'Settings'), updateSettings);
 
 // CMS support pages (dashboard)
 router.route('/cmscontact').post(protect, getAllCmsContact).get(protect, getAllCmsContact);

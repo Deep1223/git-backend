@@ -2,6 +2,8 @@ const EcomOrder = require('../../modal/ecomOrder');
 const EcomCart = require('../../modal/ecomCart');
 const EcomProduct = require('../../modal/ecomProduct');
 const EcomAnalytics = require('../../modal/ecomAnalytics');
+const SpinLog = require('../../modal/spinlog');
+const { computePromoDiscountForOrder } = require('../promoValidate');
 const { resolveActor, mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
 const { mirrorAvailableQtyFromEcomProduct } = require('../../lib/catalogProductMasterSync');
 const { notifyAllAdmins } = require('../../lib/adminNotify');
@@ -65,9 +67,31 @@ exports.createOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Cart is empty' });
         }
 
+        const subtotalBeforeDiscount = totalAmount;
+        const itemCount = items.reduce((s, i) => s + i.quantity, 0);
+        let promoDiscount = 0;
+        let promoCodeSaved = '';
+        let spinLogIdToRedeem = null;
+
+        const rawPromo = String(req.body?.promoCode || '').trim();
+        if (rawPromo) {
+            const pv = await computePromoDiscountForOrder(rawPromo, subtotalBeforeDiscount, itemCount);
+            if (!pv.ok) {
+                return res.status(400).json({ success: false, message: pv.message });
+            }
+            promoDiscount = pv.discount;
+            promoCodeSaved = pv.code;
+            spinLogIdToRedeem = pv.spinLogId || null;
+        }
+
+        totalAmount = Math.max(0, subtotalBeforeDiscount - promoDiscount);
+
         const order = await EcomOrder.create({
             ...filterByActor(actor),
             items,
+            subtotalAmount: subtotalBeforeDiscount,
+            promoCode: promoCodeSaved,
+            discountAmount: promoDiscount,
             totalAmount,
             paymentStatus: 'pending',
             orderStatus: 'processing',
@@ -75,6 +99,10 @@ exports.createOrder = async (req, res) => {
             paymentReference: `DUMMY_${Date.now()}`,
             shippingAddress: req.body?.shippingAddress || {},
         });
+
+        if (spinLogIdToRedeem) {
+            await SpinLog.findByIdAndUpdate(spinLogIdToRedeem, { $set: { coupon_redeemed: true } });
+        }
 
         for (const item of items) {
             if (!item.product) continue;
@@ -89,7 +117,7 @@ exports.createOrder = async (req, res) => {
 
         await EcomAnalytics.findOneAndUpdate(
             { date: dayKey(new Date()) },
-            { $inc: { revenue: totalAmount, sales: items.reduce((s, i) => s + i.quantity, 0), orders: 1 } },
+            { $inc: { revenue: totalAmount, sales: itemCount, orders: 1 } },
             { upsert: true, new: true }
         );
 
@@ -98,7 +126,6 @@ exports.createOrder = async (req, res) => {
             await cart.save();
         }
 
-        const itemCount = items.reduce((s, i) => s + i.quantity, 0);
         notifyAllAdmins({
             type: 'new_order',
             boldName: 'New order',
