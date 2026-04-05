@@ -1,5 +1,6 @@
 const SpinLog = require('../modal/spinlog');
 const Settings = require('../modal/settings');
+const GeneralSetting = require('../modal/generalsetting');
 
 /** Labels must match storefront wheel (`SpinToWinPopup`) for result → segment mapping */
 const REWARDS = [
@@ -52,6 +53,11 @@ function couponCode(prefix) {
 }
 
 async function getFrequencyDays() {
+    const gs = await GeneralSetting.findOne().sort({ _id: -1 }).select('spin_popup_frequency_days').lean();
+    const fromGs = Number(gs?.spin_popup_frequency_days);
+    if (Number.isFinite(fromGs) && fromGs >= 1) {
+        return Math.floor(fromGs);
+    }
     const settings = await Settings.findOne().sort({ _id: 1 }).lean();
     const n = Number(settings?.spin_popup_frequency_days);
     if (!Number.isFinite(n) || n < 1) return 1;

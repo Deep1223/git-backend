@@ -49,6 +49,8 @@ const generalSettingSchema = new mongoose.Schema({
     },
     /** Applied when defaultCurrency is not INR (percentage markup on displayed prices). */
     otherCurrencyPriceIncreasePercent: { type: Number, default: 0 },
+    /** Spin-to-win popup: minimum days between prompts (storefront). */
+    spin_popup_frequency_days: { type: Number, default: 1, min: 1 },
     timezone: { type: String, trim: true, default: 'Asia/Kolkata' },
     taxRate: { type: Number, default: 0 },
 

@@ -134,6 +134,9 @@ function normalizeBody(body) {
 
     b.taxRate = toFloat(b.taxRate, 0);
     b.otherCurrencyPriceIncreasePercent = toFloat(b.otherCurrencyPriceIncreasePercent, 0);
+    let spinFreq = Math.floor(toNum(b.spin_popup_frequency_days, 1));
+    if (!Number.isFinite(spinFreq) || spinFreq < 1) spinFreq = 1;
+    b.spin_popup_frequency_days = spinFreq;
     b.showTopBanner = to01(b.showTopBanner);
     b.showSecondaryBanner = to01(b.showSecondaryBanner);
     b.newsletterEnabled = to01(b.newsletterEnabled);
