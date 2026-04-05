@@ -93,6 +93,7 @@ const generalSettingSchema = new mongoose.Schema({
     facebookUrl: { type: String, trim: true, default: '' },
     twitterUrl: { type: String, trim: true, default: '' },
     youtubeUrl: { type: String, trim: true, default: '' },
+    pinterestUrl: { type: String, trim: true, default: '' },
 
     paymentVisa: { type: Number, default: 1 },
     paymentMastercard: { type: Number, default: 1 },

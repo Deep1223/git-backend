@@ -76,6 +76,7 @@ const SEARCH_TEXT_FIELDS = [
     'facebookUrl',
     'twitterUrl',
     'youtubeUrl',
+    'pinterestUrl',
     'urlCompanyAbout',
     'urlCompanyStory',
     'urlCompanyStores',
