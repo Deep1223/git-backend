@@ -70,7 +70,7 @@ function buildDynamicSectionItems(section, categoryGridRows, occasionGridRows) {
             { label: 'Gifts For Him', href: '/promo?recipient=him', imageUrl: DEFAULT_SECTION_IMAGES.him },
         ];
     }
-    if (title === 'gifting' || title === "shraddha's favourite" || title === 'corporate gifting') {
+    if (title === 'gifting' || title === "shraddha's favourite") {
         return [
             { label: 'Gifts For Her', href: '/promo?recipient=her', imageUrl: DEFAULT_SECTION_IMAGES.her },
             { label: 'Gifts For Him', href: '/promo?recipient=him', imageUrl: DEFAULT_SECTION_IMAGES.him },
