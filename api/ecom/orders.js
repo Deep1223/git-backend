@@ -137,7 +137,7 @@ exports.createOrder = async (req, res) => {
             tag: 'Orders',
             sender: 'Store',
             initials: 'NO',
-            redirectPath: '/dashboard',
+            redirectPath: '/storefront-orders',
             meta: { orderId: String(order._id), totalAmount, lineCount: items.length },
         });
 
@@ -224,7 +224,7 @@ exports.verifyPayment = async (req, res) => {
                 tag: 'Payments',
                 sender: 'Payments',
                 initials: 'PF',
-                redirectPath: '/dashboard',
+                redirectPath: '/storefront-orders',
                 meta: { orderId: String(orderId) },
             });
         } else if (paymentStatus === 'paid') {
@@ -239,7 +239,7 @@ exports.verifyPayment = async (req, res) => {
                 tag: 'Payments',
                 sender: 'Payments',
                 initials: 'OK',
-                redirectPath: '/dashboard',
+                redirectPath: '/storefront-orders',
                 meta: { orderId: String(orderId) },
             });
         }
@@ -291,7 +291,7 @@ exports.razorpayWebhook = async (req, res) => {
                 tag: 'Payments',
                 sender: 'Gateway',
                 initials: 'PF',
-                redirectPath: '/dashboard',
+                redirectPath: '/storefront-orders',
                 meta: { orderId: String(orderId), event },
             });
         } else if (paymentStatus === 'paid' && updated) {
@@ -306,7 +306,7 @@ exports.razorpayWebhook = async (req, res) => {
                 tag: 'Payments',
                 sender: 'Gateway',
                 initials: 'OK',
-                redirectPath: '/dashboard',
+                redirectPath: '/storefront-orders',
                 meta: { orderId: String(orderId), event },
             });
         }

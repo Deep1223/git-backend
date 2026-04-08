@@ -954,9 +954,56 @@ exports.toggle2FA = async (req, res) => {
 
     } catch (error) {
         console.error('Toggle 2FA Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update 2FA settings' 
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update 2FA settings'
         });
+    }
+};
+
+/** Admin: list all users with their login history summary. */
+exports.getAllUserLogins = async (req, res) => {
+    try {
+        const { search = '', page = 1, limit = 50 } = req.query;
+
+        let filter = {};
+        if (search.trim()) {
+            filter.$or = [
+                { email: { $regex: search.trim(), $options: 'i' } },
+                { firstname: { $regex: search.trim(), $options: 'i' } },
+                { lastname: { $regex: search.trim(), $options: 'i' } },
+                { username: { $regex: search.trim(), $options: 'i' } },
+            ];
+        }
+
+        const users = await User.find(filter)
+            .select('firstname lastname email username profileimage loginHistory recordinfo')
+            .sort({ 'loginHistory.0.at': -1, 'recordinfo.createat': -1 })
+            .skip((Number(page) - 1) * Number(limit))
+            .limit(Number(limit))
+            .lean();
+
+        const totalCount = await User.countDocuments(filter);
+
+        const data = users.map((u) => {
+            const latest = u.loginHistory?.[0] || null;
+            const norm = latest?.ip ? normalizeClientIp(latest.ip) : '';
+            return {
+                _id: u._id,
+                name: `${u.firstname || ''} ${u.lastname || ''}`.trim(),
+                email: u.email,
+                username: u.username,
+                profileimage: u.profileimage || null,
+                loginCount: u.loginHistory?.length || 0,
+                lastLogin: latest?.at || null,
+                lastLoginIp: latest ? displayClientIp(norm) : null,
+                lastLoginAgent: latest?.userAgent || null,
+                joinedAt: u.recordinfo?.createat || null,
+            };
+        });
+
+        res.status(200).json({ success: true, data, totalCount });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Server Error' });
     }
 };
