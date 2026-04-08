@@ -69,6 +69,7 @@ const {
     getLoginSessions,
     removeLoginSession,
     getMyActivity,
+    getAllUserLogins,
 } = require('./api/auth');
 const { submitFeedback } = require('./api/feedback');
 const { protect } = require('./middleware/auth');
@@ -92,6 +93,7 @@ const {
 } = require('./api/sidebarMenu');
 const { validatePromo } = require('./api/promoValidate');
 const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
+const adminOrders = require('./api/ecom/adminOrders');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
 const {
     postPublicCategories,
@@ -152,6 +154,7 @@ router.route('/auth/feedback').post(protect, submitFeedback);
 router.route('/auth/2fa/setup').post(setup2FA); // Removed protect for login flow support
 router.route('/auth/2fa/verify').post(verify2FA); // Removed protect for login flow support
 router.route('/auth/2fa').put(protect, audit('2FA_TOGGLE', 'User'), toggle2FA);
+router.route('/auth/admin/user-logins').get(protect, getAllUserLogins);
 
 // Generate Usercode Routes
 router.route('/generateusercode').get(generateUsercode).post(generateUsercode);
@@ -293,6 +296,15 @@ router.patch(
     protect,
     audit('UPDATE', 'EcomProduct'),
     adminLowStockCatalog.patchLowStockCatalogProductStock
+);
+
+// Storefront orders — list + status (dashboard auth; must be registered before /ecom router)
+router.get('/ecom/admin/orders', protect, adminOrders.listAdminOrders);
+router.patch(
+    '/ecom/admin/orders/:id',
+    protect,
+    audit('UPDATE', 'EcomOrder'),
+    adminOrders.patchAdminOrderStatus
 );
 
 // Config Route
