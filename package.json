@@ -17,6 +17,7 @@
     "seed:categorymaster:images": "node scripts/seed-categorymaster-images.js",
     "reset:ecom": "node scripts/seed.js",
     "smoke:ecom": "node scripts/smoke-ecom.js",
+    "test:order-automation": "node scripts/test-order-automation.js",
     "seed:cms-support": "node scripts/seed-cms-support.js"
   },
   "keywords": [],
@@ -44,6 +45,7 @@
     "multer": "^2.1.1",
     "multer-s3": "^3.0.1",
     "nodemailer": "^8.0.2",
+    "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
     "speakeasy": "^2.0.0",
     "xss-clean": "^0.1.4"

@@ -300,6 +300,15 @@ router.patch(
 
 // Storefront orders — list + status (dashboard auth; must be registered before /ecom router)
 router.get('/ecom/admin/orders', protect, adminOrders.listAdminOrders);
+router.get('/ecom/admin/orders/export', protect, adminOrders.exportOrdersCsv);
+router.get('/ecom/admin/orders/detail/:id', protect, adminOrders.getAdminOrderDetail);
+router.post(
+    '/ecom/admin/orders/bulk-status',
+    protect,
+    audit('UPDATE', 'EcomOrder'),
+    adminOrders.bulkAdminOrderStatus
+);
+router.post('/ecom/admin/orders/print-labels', protect, adminOrders.printOrderLabelsPdf);
 router.patch(
     '/ecom/admin/orders/:id',
     protect,

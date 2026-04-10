@@ -74,7 +74,7 @@ exports.createOrder = async (req, res) => {
                 if (!product || product.hidden || !pub || pub.stock < row.quantity) {
                     return res.status(400).json({
                         success: false,
-                        message: `Stock unavailable for one or more products`,
+                        message: 'Stock unavailable for one or more products',
                     });
                 }
                 const line = {
@@ -175,7 +175,7 @@ exports.createOrder = async (req, res) => {
         notifyAllAdmins({
             type: 'new_order',
             boldName: 'New order',
-            text: `New order — Rs ${Number(totalAmount).toLocaleString('en-IN')} · ${itemCount} unit(s)`,
+            text: `New order - Rs ${Number(totalAmount).toLocaleString('en-IN')} - ${itemCount} unit(s)`,
             name: 'New order',
             body: `A storefront order was placed. Total Rs ${Number(totalAmount).toLocaleString('en-IN')} across ${items.length} line(s), ${itemCount} unit(s).`,
             boldTag: `Rs ${Number(totalAmount).toLocaleString('en-IN')}`,
@@ -244,6 +244,7 @@ exports.verifyPayment = async (req, res) => {
         if (!orderId) {
             return res.status(400).json({ success: false, message: 'orderId is required' });
         }
+
         const paymentStatus = normalizePaymentStatus(status);
         const orderStatus = paymentStatus === 'paid' ? 'confirmed' : paymentStatus === 'failed' ? 'cancelled' : 'pending';
         const prev = await EcomOrder.findById(orderId).lean();
@@ -297,26 +298,11 @@ exports.verifyPayment = async (req, res) => {
             { new: true }
         );
 
-        if (!prev || String(prev.orderStatus) !== String(orderStatus)) {
+        if (String(prev.orderStatus) !== String(orderStatus)) {
             await appendStatusHistory(orderId, orderStatus, { note: 'Payment verified' });
         }
 
-        if (paymentStatus === 'failed') {
-            notifyAllAdmins({
-                type: 'payment_failed',
-                boldName: 'Payment failed',
-                text: `Payment failed for order ${orderId}`,
-                name: 'Payment failed',
-                body: 'The payment did not complete. Order may be cancelled or still pending — verify in your payment dashboard.',
-                boldTag: 'payment',
-                subDesc: 'Gateway reported failure',
-                tag: 'Payments',
-                sender: 'Payments',
-                initials: 'PF',
-                redirectPath: '/order-management',
-                meta: { orderId: String(orderId) },
-            });
-        } else if (paymentStatus === 'paid') {
+        if (paymentStatus === 'paid') {
             notifyAllAdmins({
                 type: 'payment_success',
                 boldName: 'Payment received',
@@ -329,6 +315,8 @@ exports.verifyPayment = async (req, res) => {
                 sender: 'Payments',
                 initials: 'OK',
                 redirectPath: '/order-management',
+                dedupeKey: `payment_success_${orderId}`,
+                dedupeWindowMs: 15 * 60 * 1000,
                 meta: { orderId: String(orderId) },
             });
         }
@@ -339,9 +327,6 @@ exports.verifyPayment = async (req, res) => {
     }
 };
 
-/**
- * Customer: request a return for a delivered order.
- */
 exports.requestReturn = async (req, res) => {
     try {
         const actor = resolveActor(req);
@@ -358,7 +343,6 @@ exports.requestReturn = async (req, res) => {
         if (returnReason) order.cancelReason = returnReason;
         await order.save();
         await appendStatusHistory(order._id, 'return_requested', { note: returnReason || 'Customer requested return' });
-        // Populate for email
         const populated = await EcomOrder.findById(order._id).populate('user', 'name email').lean();
         sendOrderStatusEmail(populated, 'return_requested');
         notifyAllAdmins({
@@ -381,9 +365,6 @@ exports.requestReturn = async (req, res) => {
     }
 };
 
-/**
- * Public: look up order by orderNumber + email (no auth needed).
- */
 exports.trackOrder = async (req, res) => {
     try {
         const orderNumber = String(req.query.orderNumber || req.body?.orderNumber || '').trim().toUpperCase();
@@ -392,7 +373,6 @@ exports.trackOrder = async (req, res) => {
             return res.status(400).json({ success: false, message: 'orderNumber is required' });
         }
         const filter = { orderNumber };
-        // If email provided, match against shipping address email (case-insensitive)
         if (email) {
             filter['shippingAddress.email'] = { $regex: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') };
         }
@@ -436,11 +416,53 @@ exports.razorpayWebhook = async (req, res) => {
         }
 
         const paidEvents = new Set(['payment.captured', 'order.paid']);
-        const failedEvents = new Set(['payment.failed']);
+        const failedEvents = new Set(['payment.failed', 'order.expired']);
         const paymentStatus = paidEvents.has(event) ? 'paid' : failedEvents.has(event) ? 'failed' : 'pending';
-        const orderStatus = paymentStatus === 'paid' ? 'confirmed' : paymentStatus === 'failed' ? 'cancelled' : 'pending';
+        if (paymentStatus === 'pending') {
+            return res.status(200).json({ success: true, ignored: true, message: `Ignoring event ${event || 'unknown'}` });
+        }
 
-        const prevWh = await EcomOrder.findById(orderId).lean();
+        const orderStatus = paymentStatus === 'paid' ? 'confirmed' : 'cancelled';
+        const prev = await EcomOrder.findById(orderId).lean();
+        if (!prev) return res.status(404).json({ success: false, message: 'Order not found' });
+
+        if (paymentStatus === 'paid' && isAutoCancelledOrder(prev)) {
+            await handleLatePaidOrder(prev, event || 'webhook');
+            return res.status(200).json({
+                success: true,
+                ignored: true,
+                message: 'Paid webhook ignored because order was already auto-cancelled',
+            });
+        }
+
+        if (paymentStatus === 'failed') {
+            const cancelled = await markOrderCancelled(orderId, {
+                paymentStatus: 'failed',
+                cancelReason: prev.cancelReason || 'Payment failed or expired',
+                note: `Webhook ${event || ''}`.trim(),
+            });
+            if (cancelled.error) {
+                return res.status(cancelled.error.status).json({ success: false, message: cancelled.error.message });
+            }
+            notifyAllAdmins({
+                type: 'payment_failed',
+                boldName: 'Payment failed',
+                text: `Payment failed for order ${orderId} (webhook)`,
+                name: 'Payment failed',
+                body: 'Gateway reported a failed or expired payment. Inventory was released.',
+                boldTag: 'webhook',
+                subDesc: event || 'payment.failed',
+                tag: 'Payments',
+                sender: 'Gateway',
+                initials: 'PF',
+                redirectPath: '/order-management/cancelled',
+                dedupeKey: `payment_failed_${orderId}`,
+                dedupeWindowMs: 15 * 60 * 1000,
+                meta: { orderId: String(orderId), event },
+            });
+            return res.status(200).json({ success: true, data: cancelled.order });
+        }
+
         const updated = await EcomOrder.findByIdAndUpdate(
             orderId,
             {
@@ -452,43 +474,28 @@ exports.razorpayWebhook = async (req, res) => {
             { new: true }
         ).lean();
 
-        if (updated && (!prevWh || String(prevWh.orderStatus) !== String(orderStatus))) {
+        if (String(prev.orderStatus) !== String(orderStatus)) {
             await appendStatusHistory(orderId, orderStatus, { note: `Webhook ${event || ''}`.trim() });
         }
 
-        if (paymentStatus === 'failed') {
-            notifyAllAdmins({
-                type: 'payment_failed',
-                boldName: 'Payment failed',
-                text: `Payment failed for order ${orderId} (webhook)`,
-                name: 'Payment failed',
-                body: 'Razorpay (or your gateway) reported a failed payment.',
-                boldTag: 'webhook',
-                subDesc: event || 'payment.failed',
-                tag: 'Payments',
-                sender: 'Gateway',
-                initials: 'PF',
-                redirectPath: '/order-management',
-                meta: { orderId: String(orderId), event },
-            });
-        } else if (paymentStatus === 'paid' && updated) {
-            notifyAllAdmins({
-                type: 'payment_success',
-                boldName: 'Payment received',
-                text: `Payment confirmed for order ${orderId} (webhook)`,
-                name: 'Payment received',
-                body: 'Gateway captured payment successfully.',
-                boldTag: 'paid',
-                subDesc: event || 'captured',
-                tag: 'Payments',
-                sender: 'Gateway',
-                initials: 'OK',
-                redirectPath: '/order-management',
-                meta: { orderId: String(orderId), event },
-            });
-        }
+        notifyAllAdmins({
+            type: 'payment_success',
+            boldName: 'Payment received',
+            text: `Payment confirmed for order ${orderId} (webhook)`,
+            name: 'Payment received',
+            body: 'Gateway captured payment successfully.',
+            boldTag: 'paid',
+            subDesc: event || 'captured',
+            tag: 'Payments',
+            sender: 'Gateway',
+            initials: 'OK',
+            redirectPath: '/order-management',
+            dedupeKey: `payment_success_${orderId}`,
+            dedupeWindowMs: 15 * 60 * 1000,
+            meta: { orderId: String(orderId), event },
+        });
 
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, data: updated });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'razorpay_webhook_failed' });
     }
