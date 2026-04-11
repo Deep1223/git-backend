@@ -1,5 +1,7 @@
 const EcomOrder = require('../../modal/ecomOrder');
 const EcomOrderStatusHistory = require('../../modal/ecomOrderStatusHistory');
+const EcomShipment = require('../../modal/ecomShipment');
+const EcomReturnRefund = require('../../modal/ecomReturnRefund');
 const GeneralSetting = require('../../modal/generalsetting');
 const { appendStatusHistory, normalizeOrderStatus } = require('../../lib/ecomOrderAdminHelpers');
 const { sendOrderStatusEmail } = require('../../lib/ecomOrderEmail');
@@ -127,13 +129,19 @@ exports.getAdminOrderDetail = async (req, res) => {
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
-        const history = await EcomOrderStatusHistory.find({ order: order._id }).sort({ createdAt: -1 }).lean();
+        const [history, shipment, returnRefund] = await Promise.all([
+            EcomOrderStatusHistory.find({ order: order._id }).sort({ createdAt: -1 }).lean(),
+            EcomShipment.findOne({ order: order._id }).lean(),
+            EcomReturnRefund.findOne({ order: order._id }).lean(),
+        ]);
         return res.status(200).json({
             success: true,
             data: {
                 ...order,
                 displayStatus: normalizeOrderStatus(order.orderStatus),
                 statusHistory: history,
+                shipment: shipment || null,
+                returnRefund: returnRefund || null,
             },
         });
     } catch (error) {
