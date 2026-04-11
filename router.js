@@ -94,6 +94,8 @@ const {
 const { validatePromo } = require('./api/promoValidate');
 const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const adminOrders = require('./api/ecom/adminOrders');
+const adminShipping = require('./api/ecom/adminShipping');
+const adminReturnRefund = require('./api/ecom/adminReturnRefund');
 const { uploadImage, uploadMiddleware } = require('./api/upload');
 const {
     postPublicCategories,
@@ -300,12 +302,33 @@ router.patch(
 
 // Storefront orders — list + status (dashboard auth; must be registered before /ecom router)
 router.get('/ecom/admin/orders', protect, adminOrders.listAdminOrders);
+router.get('/ecom/admin/orders/export', protect, adminOrders.exportOrdersCsv);
+router.get('/ecom/admin/orders/detail/:id', protect, adminOrders.getAdminOrderDetail);
+router.get('/ecom/admin/shipping-center', protect, adminShipping.listAdminShippingCases);
+router.get('/ecom/admin/return-refund-center', protect, adminReturnRefund.listAdminReturnRefundCases);
+router.post(
+    '/ecom/admin/orders/bulk-status',
+    protect,
+    audit('UPDATE', 'EcomOrder'),
+    adminOrders.bulkAdminOrderStatus
+);
+router.post('/ecom/admin/orders/print-labels', protect, adminOrders.printOrderLabelsPdf);
 router.patch(
     '/ecom/admin/orders/:id',
     protect,
     audit('UPDATE', 'EcomOrder'),
     adminOrders.patchAdminOrderStatus
 );
+router.get('/ecom/admin/orders/:id/shipping', protect, adminShipping.getAdminShippingDetail);
+router.put('/ecom/admin/orders/:id/shipping', protect, audit('UPDATE', 'EcomShipment'), adminShipping.upsertAdminShippingDetail);
+router.post('/ecom/admin/orders/:id/shipping/generate-awb', protect, audit('UPDATE', 'EcomShipment'), adminShipping.generateAdminShippingAwb);
+router.post('/ecom/admin/orders/:id/shipping/book-pickup', protect, audit('UPDATE', 'EcomShipment'), adminShipping.bookAdminShippingPickup);
+router.put('/ecom/admin/orders/:id/shipping/pickup', protect, audit('UPDATE', 'EcomShipment'), adminShipping.updateAdminShippingPickup);
+router.put('/ecom/admin/orders/:id/shipping/exception', protect, audit('UPDATE', 'EcomShipment'), adminShipping.updateAdminShippingException);
+router.put('/ecom/admin/orders/:id/shipping/state', protect, audit('UPDATE', 'EcomShipment'), adminShipping.markAdminShipmentState);
+router.get('/ecom/admin/orders/:id/return-refund', protect, adminReturnRefund.getAdminReturnRefundDetail);
+router.post('/ecom/admin/orders/:id/return-refund/review', protect, audit('UPDATE', 'EcomReturnRefund'), adminReturnRefund.approveOrRejectAdminReturn);
+router.put('/ecom/admin/orders/:id/return-refund', protect, audit('UPDATE', 'EcomReturnRefund'), adminReturnRefund.updateAdminReturnRefund);
 
 // Config Route
 router.get('/config', getConfig); // Public access for app config
@@ -369,6 +392,10 @@ router.route('/cmsreturns/create').post(protect, audit('CREATE', 'CmsReturns'), 
 router.route('/cmsreturns/update').post(protect, audit('UPDATE', 'CmsReturns'), updateCmsReturns);
 router.route('/cmsreturns/delete').post(protect, audit('DELETE', 'CmsReturns'), deleteCmsReturns);
 router.route('/cmsreturns/:id').get(protect, getCmsReturnsById);
+
+// User-specific data routes
+const userRoutes = require('./api/users/userData');
+router.use('/users', userRoutes);
 
 // New e-commerce REST APIs (auth/products/cart/orders/storefront/recommendations)
 router.use('/ecom', ecomRouter);

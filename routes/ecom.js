@@ -4,7 +4,7 @@ const auth = require('../api/ecom/auth');
 const categories = require('../api/ecom/categories');
 const products = require('../api/ecom/products');
 const cart = require('../api/ecom/cart');
-const orders = require('../api/ecom/orders');
+const orders = require('../api/ecom/ordersV2');
 const storefront = require('../api/ecom/storefront');
 const recommendations = require('../api/ecom/recommendations');
 const analytics = require('../api/ecom/analytics');
@@ -42,7 +42,9 @@ router.delete('/cart/item/:productId', cart.removeCartItem);
 // Orders / Payment
 router.post('/orders', orders.createOrder);
 router.get('/orders', orders.listOrders);
+router.get('/orders/track', orders.trackOrder);
 router.get('/orders/:id', orders.getOrderById);
+router.patch('/orders/:id/return-request', orders.requestReturn);
 router.post('/payments/create-order', orders.dummyCreatePaymentOrder);
 router.post('/payments/verify', orders.verifyPayment);
 router.post('/payments/webhook/razorpay', orders.razorpayWebhook);

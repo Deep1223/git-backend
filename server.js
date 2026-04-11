@@ -12,6 +12,7 @@ const morgan = require('morgan');
 const router = require('./router');
 const errorHandler = require('./middleware/error');
 const { startEcomJobs } = require('./jobs/ecom');
+const webSocketServer = require('./lib/websocketServer');
 
 // Load env vars
 dotenv.config();
@@ -121,7 +122,15 @@ startEcomJobs();
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server started successfully on port ${PORT}`);
-    console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+const server = app.listen(PORT, () => {
+    console.log(`Server started successfully on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Initialize WebSocket server
+    const wsInitialized = webSocketServer.initialize(server);
+    if (wsInitialized) {
+        console.log('WebSocket server initialized successfully');
+    } else {
+        console.log('WebSocket server initialization failed');
+    }
 });

@@ -108,6 +108,7 @@ const productMasterSchema = new mongoose.Schema({
     },
     weight: {
         type: String,
+        required: [true, 'Product weight is required'],
         trim: true,
         default: ''
     },
