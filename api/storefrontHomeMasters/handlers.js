@@ -1,6 +1,11 @@
 const GeneralSetting = require('../../modal/generalsetting');
 const { parseCms, setRecordInfo } = require('./helpers');
 const { getDef } = require('./definitions');
+const {
+    collectBlogAssetUrls,
+    deleteCloudinaryUrls,
+    prepareBlogBodyAssets,
+} = require('./blogAssets');
 
 async function getLatestSetting() {
     return GeneralSetting.findOne().sort({ 'recordinfo.createat': -1 });
@@ -21,6 +26,24 @@ async function ensureSettingDoc(username) {
         storefrontContentJson: JSON.stringify({}, null, 2),
     });
     return doc;
+}
+
+async function prepareSectionPayload(alias, def, body, currentSection = {}) {
+    if (alias !== 'storefrontblogsectionmaster') {
+        const nextSection = def.write(body || {});
+        return { nextSection, cleanupUrls: [] };
+    }
+
+    const preparedAssets = await prepareBlogBodyAssets(body || {});
+    const nextSection = def.write(preparedAssets.body);
+    const previousUrls = collectBlogAssetUrls(currentSection);
+    const nextUrls = collectBlogAssetUrls(nextSection);
+    const removedUrls = previousUrls.filter((url) => !nextUrls.includes(url));
+
+    return {
+        nextSection,
+        cleanupUrls: [...new Set([...preparedAssets.cleanupTempUrls, ...removedUrls])],
+    };
 }
 
 exports.getStorefrontMasterList = (alias) => async (req, res) => {
@@ -58,10 +81,13 @@ exports.createStorefrontMaster = (alias) => async (req, res) => {
 
         const doc = await ensureSettingDoc(req.user ? req.user.username : 'system');
         const cms = parseCms(doc.storefrontContentJson);
-        cms[def.cmsKey] = def.write(req.body || {});
+        const currentSection = cms[def.cmsKey] && typeof cms[def.cmsKey] === 'object' ? cms[def.cmsKey] : {};
+        const { cleanupUrls, nextSection } = await prepareSectionPayload(alias, def, req.body, currentSection);
+        cms[def.cmsKey] = nextSection;
         doc.storefrontContentJson = JSON.stringify(cms, null, 2);
         setRecordInfo(doc, req.user ? req.user.username : 'system');
         await doc.save();
+        await deleteCloudinaryUrls(cleanupUrls);
 
         return res.status(201).json({ success: true, data: makeRow(doc, alias, def) });
     } catch (error) {
@@ -76,10 +102,13 @@ exports.updateStorefrontMaster = (alias) => async (req, res) => {
 
         const doc = await ensureSettingDoc(req.user ? req.user.username : 'system');
         const cms = parseCms(doc.storefrontContentJson);
-        cms[def.cmsKey] = def.write(req.body || {});
+        const currentSection = cms[def.cmsKey] && typeof cms[def.cmsKey] === 'object' ? cms[def.cmsKey] : {};
+        const { cleanupUrls, nextSection } = await prepareSectionPayload(alias, def, req.body, currentSection);
+        cms[def.cmsKey] = nextSection;
         doc.storefrontContentJson = JSON.stringify(cms, null, 2);
         setRecordInfo(doc, req.user ? req.user.username : 'system');
         await doc.save();
+        await deleteCloudinaryUrls(cleanupUrls);
 
         return res.status(200).json({ success: true, data: makeRow(doc, alias, def) });
     } catch (error) {
@@ -95,10 +124,13 @@ exports.deleteStorefrontMaster = (alias) => async (req, res) => {
         if (!doc) return res.status(200).json({ success: true, message: 'No data to delete' });
 
         const cms = parseCms(doc.storefrontContentJson);
+        const currentSection = cms[def.cmsKey] && typeof cms[def.cmsKey] === 'object' ? cms[def.cmsKey] : {};
+        const cleanupUrls = alias === 'storefrontblogsectionmaster' ? collectBlogAssetUrls(currentSection) : [];
         delete cms[def.cmsKey];
         doc.storefrontContentJson = JSON.stringify(cms, null, 2);
         setRecordInfo(doc, req.user ? req.user.username : 'system');
         await doc.save();
+        await deleteCloudinaryUrls(cleanupUrls);
 
         return res.status(200).json({ success: true, message: 'Storefront section cleared' });
     } catch (error) {

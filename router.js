@@ -96,7 +96,7 @@ const adminLowStockCatalog = require('./api/ecom/adminLowStockCatalog');
 const adminOrders = require('./api/ecom/adminOrders');
 const adminShipping = require('./api/ecom/adminShipping');
 const adminReturnRefund = require('./api/ecom/adminReturnRefund');
-const { uploadImage, uploadMiddleware } = require('./api/upload');
+const { cleanupTempUploads, uploadImage, uploadMiddleware } = require('./api/upload');
 const {
     postPublicCategories,
     postPublicSubcategories,
@@ -170,6 +170,7 @@ router.route('/usermaster/:id').get(protect, getUserById);
 
 // Upload Routes
 router.post('/upload', protect, uploadMiddleware, uploadImage);
+router.post('/upload/cleanup-temp', protect, cleanupTempUploads);
 
 // Category Master Routes (base path: /category)
 router.route('/category/create').post(protect, audit('CREATE', 'Category'), createCategory);
@@ -303,6 +304,8 @@ router.patch(
 // Storefront orders — list + status (dashboard auth; must be registered before /ecom router)
 router.get('/ecom/admin/orders', protect, adminOrders.listAdminOrders);
 router.get('/ecom/admin/orders/export', protect, adminOrders.exportOrdersCsv);
+router.get('/ecom/admin/orders/reports/export', protect, adminOrders.exportOrdersReport);
+router.get('/ecom/admin/orders/reports/summary', protect, adminOrders.getOrderReportSummary);
 router.get('/ecom/admin/orders/detail/:id', protect, adminOrders.getAdminOrderDetail);
 router.get('/ecom/admin/shipping-center', protect, adminShipping.listAdminShippingCases);
 router.get('/ecom/admin/return-refund-center', protect, adminReturnRefund.listAdminReturnRefundCases);
