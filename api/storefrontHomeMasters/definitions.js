@@ -1,5 +1,23 @@
 const { toStr, toNum, splitList, parseObjectIdList, mapRowHelpers } = require('./helpers');
 
+function toBool(value, fallback = false) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value > 0;
+    const raw = toStr(value).toLowerCase();
+    if (!raw) return fallback;
+    if (['true', '1', 'yes', 'y', 'on'].includes(raw)) return true;
+    if (['false', '0', 'no', 'n', 'off'].includes(raw)) return false;
+    return fallback;
+}
+
+function toIsoDate(value) {
+    const raw = toStr(value);
+    if (!raw) return '';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toISOString();
+}
+
 function toFeatureRow(row) {
     const title = toStr(row?.featureTitle ?? row?.title);
     const description = toStr(row?.featureDescription ?? row?.description);
@@ -166,18 +184,97 @@ const DEFS = {
         cmsKey: 'blogSection',
         read: (section = {}) => ({
             title: toStr(section.title),
-            ...mapRowHelpers.readPost(section, 1),
-            ...mapRowHelpers.readPost(section, 2),
-            ...mapRowHelpers.readPost(section, 3),
-            buttonText: toStr(section?.button?.text),
-            buttonHref: toStr(section?.button?.href),
+            slug: toStr(section.slug),
+            shortDescription: toStr(section.shortDescription),
+            fullContent: toStr(section.fullContent),
+            featuredImage: toStr(section.featuredImage),
+            imageAltText: toStr(section.imageAltText),
+            category: toStr(section.category),
+            subCategory: toStr(section.subCategory),
+            tags: Array.isArray(section.tags) ? section.tags.map((tag) => toStr(tag)).filter(Boolean) : [],
+            authorName: toStr(section.authorName),
+            authorImage: toStr(section.authorImage),
+            sourceReference: toStr(section.sourceReference),
+            status: toStr(section.status, 'draft'),
+            publishDate: toIsoDate(section.publishDate),
+            scheduleDate: toIsoDate(section.scheduleDate),
+            isFeatured: toBool(section.isFeatured, false),
+            isTrending: toBool(section.isTrending, false),
+            metaTitle: toStr(section.metaTitle),
+            metaDescription: toStr(section.metaDescription),
+            metaKeywords: Array.isArray(section.metaKeywords) ? section.metaKeywords.map((keyword) => toStr(keyword)).filter(Boolean) : [],
+            canonicalUrl: toStr(section.canonicalUrl),
+            ogTitle: toStr(section.ogTitle),
+            ogDescription: toStr(section.ogDescription),
+            ogImage: toStr(section.ogImage),
+            twitterCardTitle: toStr(section.twitterCardTitle),
+            twitterCardImage: toStr(section.twitterCardImage),
+            robots: toStr(section.robots, 'index'),
+            sitemapInclude: toBool(section.sitemapInclude, true),
+            tableOfContents: Array.isArray(section.tableOfContents) ? section.tableOfContents : [],
+            readingTime: toStr(section.readingTime),
+            viewsCount: toNum(section.viewsCount, 0),
+            likesCount: toNum(section.likesCount, 0),
+            sharesCount: toNum(section.sharesCount, 0),
+            commentsEnabled: toBool(section.commentsEnabled, true),
+            adSlot1: toStr(section.adSlot1),
+            adSlot2: toStr(section.adSlot2),
+            adSlot3: toStr(section.adSlot3),
+            affiliateLinks: Array.isArray(section.affiliateLinks) ? section.affiliateLinks.map((link) => toStr(link)).filter(Boolean) : [],
+            galleryImages: Array.isArray(section.galleryImages) ? section.galleryImages.map((image) => toStr(image)).filter(Boolean) : [],
+            videoUrl: toStr(section.videoUrl),
+            embedCode: toStr(section.embedCode),
+            articleType: toStr(section.articleType, 'BlogPosting'),
+            publishedDate: toIsoDate(section.publishedDate),
+            modifiedDate: toIsoDate(section.modifiedDate),
+            authorSchema: toStr(section.authorSchema),
         }),
         write: (body) => ({
             title: toStr(body.title),
-            posts: [mapRowHelpers.writePost(body, 1), mapRowHelpers.writePost(body, 2), mapRowHelpers.writePost(body, 3)].filter(
-                (row) => row.slug || row.title || row.excerpt || row.image || row.dateLabel || row.href
-            ),
-            button: { text: toStr(body.buttonText), href: toStr(body.buttonHref) },
+            slug: toStr(body.slug),
+            shortDescription: toStr(body.shortDescription),
+            fullContent: toStr(body.fullContent),
+            featuredImage: toStr(body.featuredImage),
+            imageAltText: toStr(body.imageAltText),
+            category: toStr(body.category),
+            subCategory: toStr(body.subCategory),
+            tags: Array.isArray(body.tags) ? body.tags.map((tag) => toStr(tag)).filter(Boolean) : splitList(body.tags),
+            authorName: toStr(body.authorName),
+            authorImage: toStr(body.authorImage),
+            sourceReference: toStr(body.sourceReference),
+            status: toStr(body.status, 'draft'),
+            publishDate: toIsoDate(body.publishDate),
+            scheduleDate: toIsoDate(body.scheduleDate),
+            isFeatured: toBool(body.isFeatured, false),
+            isTrending: toBool(body.isTrending, false),
+            metaTitle: toStr(body.metaTitle),
+            metaDescription: toStr(body.metaDescription),
+            metaKeywords: Array.isArray(body.metaKeywords) ? body.metaKeywords.map((keyword) => toStr(keyword)).filter(Boolean) : splitList(body.metaKeywords),
+            canonicalUrl: toStr(body.canonicalUrl),
+            ogTitle: toStr(body.ogTitle),
+            ogDescription: toStr(body.ogDescription),
+            ogImage: toStr(body.ogImage),
+            twitterCardTitle: toStr(body.twitterCardTitle),
+            twitterCardImage: toStr(body.twitterCardImage),
+            robots: toStr(body.robots, 'index'),
+            sitemapInclude: toBool(body.sitemapInclude, true),
+            tableOfContents: Array.isArray(body.tableOfContents) ? body.tableOfContents : [],
+            readingTime: toStr(body.readingTime),
+            viewsCount: Math.max(0, toNum(body.viewsCount, 0)),
+            likesCount: Math.max(0, toNum(body.likesCount, 0)),
+            sharesCount: Math.max(0, toNum(body.sharesCount, 0)),
+            commentsEnabled: toBool(body.commentsEnabled, true),
+            adSlot1: toStr(body.adSlot1),
+            adSlot2: toStr(body.adSlot2),
+            adSlot3: toStr(body.adSlot3),
+            affiliateLinks: Array.isArray(body.affiliateLinks) ? body.affiliateLinks.map((link) => toStr(link)).filter(Boolean) : splitList(body.affiliateLinks),
+            galleryImages: Array.isArray(body.galleryImages) ? body.galleryImages.map((image) => toStr(image)).filter(Boolean) : splitList(body.galleryImages),
+            videoUrl: toStr(body.videoUrl),
+            embedCode: toStr(body.embedCode),
+            articleType: toStr(body.articleType, 'BlogPosting'),
+            publishedDate: toIsoDate(body.publishedDate || body.publishDate),
+            modifiedDate: toIsoDate(body.modifiedDate || Date.now()),
+            authorSchema: toStr(body.authorSchema),
         }),
     },
     storefrontshopwithconfidencemaster: {

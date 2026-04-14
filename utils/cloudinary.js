@@ -20,6 +20,40 @@ const ensureConfig = () => {
     }
 };
 
+const normalizeFolder = (folder = 'temp') =>
+    String(folder || 'temp').replace(/^\/+|\/+$/g, '');
+
+const isCloudinaryUrl = (url = '') => /res\.cloudinary\.com/i.test(String(url || ''));
+
+const extractPublicIdFromUrl = (url = '') => {
+    if (!isCloudinaryUrl(url)) return '';
+
+    try {
+        const parsed = new URL(url);
+        const uploadMarker = '/upload/';
+        const uploadIndex = parsed.pathname.indexOf(uploadMarker);
+        if (uploadIndex === -1) return '';
+
+        let assetPath = parsed.pathname.slice(uploadIndex + uploadMarker.length);
+        assetPath = assetPath.replace(/^v\d+\//, '');
+        if (!assetPath) return '';
+
+        const segments = assetPath.split('/').filter(Boolean);
+        if (!segments.length) return '';
+
+        const lastSegment = segments.pop();
+        segments.push(path.posix.parse(lastSegment).name);
+        return segments.join('/');
+    } catch (error) {
+        return '';
+    }
+};
+
+const isTempCloudinaryUrl = (url = '') => {
+    const publicId = extractPublicIdFromUrl(url);
+    return /(^|\/)temp\//i.test(publicId);
+};
+
 /**
  * Uploads a file buffer to Cloudinary
  */
@@ -33,7 +67,7 @@ exports.uploadToCloudinary = async (file, folder = 'temp') => {
     return new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
             {
-                folder: folder,
+                folder: normalizeFolder(folder),
                 resource_type: 'auto',
                 public_id: `${Date.now()}-${path.parse(file.originalname).name}`
             },
@@ -49,11 +83,30 @@ exports.uploadToCloudinary = async (file, folder = 'temp') => {
 
 /**
  * Cloudinary doesn't strictly need a 'move' operation like S3 for folders, 
- * but we can rename or just return the URL if the logic doesn't require physical moving.
- * For consistency with S3, we'll just return the URL here.
+ * but rename gives us a clean temp -> permanent workflow.
  */
-exports.moveToPermanentCloudinary = async (url) => {
-    return url;
+exports.moveToPermanentCloudinary = async (url, folder = 'orinket/blog') => {
+    ensureConfig();
+    if (!url || !isCloudinaryConfigured()) return url;
+
+    const sourcePublicId = extractPublicIdFromUrl(url);
+    if (!sourcePublicId || !/(^|\/)temp\//i.test(sourcePublicId)) {
+        return url;
+    }
+
+    const targetFolder = normalizeFolder(folder);
+    const baseName = path.posix.basename(sourcePublicId);
+    const targetPublicId = `${targetFolder}/${baseName}`;
+
+    if (sourcePublicId === targetPublicId) return url;
+
+    const result = await cloudinary.uploader.rename(sourcePublicId, targetPublicId, {
+        overwrite: true,
+        invalidate: true,
+        resource_type: 'image',
+    });
+
+    return result.secure_url || url;
 };
 
 /**
@@ -63,15 +116,16 @@ exports.deleteFromCloudinary = async (url) => {
     if (!url || !isCloudinaryConfigured()) return;
 
     try {
-        // Extract public_id from URL
-        // Example: https://res.cloudinary.com/cloudname/image/upload/v123/folder/filename.jpg
-        const parts = url.split('/');
-        const fileNameWithExtension = parts.pop();
-        const folder = parts.pop();
-        const publicId = `${folder}/${path.parse(fileNameWithExtension).name}`;
+        ensureConfig();
+        const publicId = extractPublicIdFromUrl(url);
+        if (!publicId) return;
 
-        await cloudinary.uploader.destroy(publicId);
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
     } catch (error) {
         console.error('Error deleting Cloudinary object:', error);
     }
 };
+
+exports.extractPublicIdFromUrl = extractPublicIdFromUrl;
+exports.isCloudinaryUrl = isCloudinaryUrl;
+exports.isTempCloudinaryUrl = isTempCloudinaryUrl;

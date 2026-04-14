@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 const { uploadToS3 } = require('../utils/s3');
-const { uploadToCloudinary } = require('../utils/cloudinary');
+const { deleteFromCloudinary, isTempCloudinaryUrl, uploadToCloudinary } = require('../utils/cloudinary');
 
 // Configure multer for memory storage (S3 and Cloudinary upload)
 const storage = multer.memoryStorage();
@@ -60,7 +60,7 @@ exports.uploadImage = async (req, res) => {
         let fileUrl;
 
         if (storageType === 'cloudinary') {
-            fileUrl = await uploadToCloudinary(req.file, 'temp');
+            fileUrl = await uploadToCloudinary(req.file, 'orinket/temp');
         } else {
             // Default to S3
             fileUrl = await uploadToS3(req.file, 'temp');
@@ -80,6 +80,28 @@ exports.uploadImage = async (req, res) => {
             success: false,
             message: 'Error uploading file',
             error: error.message
+        });
+    }
+};
+
+exports.cleanupTempUploads = async (req, res) => {
+    try {
+        const urls = Array.isArray(req.body?.urls) ? req.body.urls : [];
+        const tempUrls = [...new Set(urls.map((url) => String(url || '').trim()).filter((url) => isTempCloudinaryUrl(url)))];
+
+        await Promise.allSettled(tempUrls.map((url) => deleteFromCloudinary(url)));
+
+        return res.status(200).json({
+            success: true,
+            message: 'Temp uploads cleaned',
+            data: { deletedCount: tempUrls.length },
+        });
+    } catch (error) {
+        console.error('Temp cleanup error:', error.message);
+        return res.status(500).json({
+            success: false,
+            message: 'Could not clean temp uploads',
+            error: error.message,
         });
     }
 };
