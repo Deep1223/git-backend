@@ -3,6 +3,7 @@ const EcomCart = require('../../modal/ecomCart');
 const EcomProduct = require('../../modal/ecomProduct');
 const EcomAnalytics = require('../../modal/ecomAnalytics');
 const SpinLog = require('../../modal/spinlog');
+const PromoCode = require('../../modal/promocodemaster');
 const { computePromoDiscountForOrder } = require('../promoValidate');
 const { resolveActor, mapProductPublic, PRODUCT_MASTER_PUBLIC_SELECT } = require('./helpers');
 const { mirrorAvailableQtyFromEcomProduct } = require('../../lib/catalogProductMasterSync');
@@ -110,6 +111,7 @@ exports.createOrder = async (req, res) => {
         let promoDiscount = 0;
         let promoCodeSaved = '';
         let spinLogIdToRedeem = null;
+        let promoCodeIdToInc = null;
 
         const rawPromo = String(req.body?.promoCode || '').trim();
         if (rawPromo) {
@@ -120,6 +122,7 @@ exports.createOrder = async (req, res) => {
             promoDiscount = pv.discount;
             promoCodeSaved = pv.code;
             spinLogIdToRedeem = pv.spinLogId || null;
+            promoCodeIdToInc = pv.promoCodeId || null;
         }
 
         totalAmount = Math.max(0, subtotalBeforeDiscount - promoDiscount);
@@ -148,6 +151,10 @@ exports.createOrder = async (req, res) => {
 
         if (spinLogIdToRedeem) {
             await SpinLog.findByIdAndUpdate(spinLogIdToRedeem, { $set: { coupon_redeemed: true } });
+        }
+
+        if (promoCodeIdToInc) {
+            await PromoCode.findByIdAndUpdate(promoCodeIdToInc, { $inc: { redemptionCount: 1 } });
         }
 
         for (const item of items) {

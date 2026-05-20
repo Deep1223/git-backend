@@ -352,7 +352,7 @@ router.post('/public/cms-faq', postPublicCmsFaq);
 router.post('/public/cms-shipping', postPublicCmsShipping);
 router.post('/public/cms-returns', postPublicCmsReturns);
 
-// Storefront promo (spin coupons + static codes) — no auth
+// Storefront promo (spin coupons + Mongo promo_codes, legacy static fallback) — no auth
 router.post('/promo/validate', validatePromo);
 
 // Spin to win (backend-controlled popup visibility + spin result)
