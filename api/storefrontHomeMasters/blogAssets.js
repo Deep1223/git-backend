@@ -1,3 +1,4 @@
+const { BRAND } = require('../../config/brand');
 const {
     deleteFromCloudinary,
     isCloudinaryUrl,
@@ -5,7 +6,7 @@ const {
     moveToPermanentCloudinary,
 } = require('../../utils/cloudinary');
 
-const BLOG_PERMANENT_FOLDER = 'orinket/blog';
+const BLOG_PERMANENT_FOLDER = BRAND.cloudinaryBlog;
 const BLOG_IMAGE_FIELDS = ['featuredImage', 'authorImage', 'ogImage', 'twitterCardImage'];
 const IMG_SRC_REGEX = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
 

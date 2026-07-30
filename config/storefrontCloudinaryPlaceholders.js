@@ -4,7 +4,7 @@
  *
  * Hero banners use **curated stock** (Unsplash, jewellery) — not `sample`, which is always the same flower.
  * Production: put assets on your Cloudinary and swap URLs, e.g.
- *   `https://res.cloudinary.com/<CLOUD_NAME>/image/upload/v.../orinket/hero-1.jpg`
+ *   `https://res.cloudinary.com/<CLOUD_NAME>/image/upload/v.../<brand>/hero-1.jpg`
  */
 function demo(transform) {
     return `https://res.cloudinary.com/demo/image/upload/${transform}/sample`;

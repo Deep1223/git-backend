@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const StorefrontReview = require('../modal/storefrontreview');
 
 function mapSort(incomingSort) {
@@ -132,7 +133,7 @@ exports.submitPublicProductReview = async (req, res) => {
             rating: halfStepRating,
             title: title.slice(0, 120),
             text: text.slice(0, 2000),
-            source: 'orinket-web',
+            source: BRAND.reviewSource,
             status: 1,
             recordinfo: {
                 createat: Date.now(),

@@ -1,6 +1,6 @@
 /**
  * Add a storefront homepage section key to Product Master rows (`storefrontHomeSectionKeys`)
- * so /promo?section=<key> lists them on the Orinket storefront.
+ * so /promo?section=<key> lists them on the storefront.
  *
  * Default key: demiFineJewelleryProducts (Demifine “Shop collection” → /promo?section=demiFineJewelleryProducts).
  *

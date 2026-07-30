@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 require('dotenv').config({ path: require('path').join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 const GeneralSetting = require('../modal/generalsetting');
@@ -15,7 +16,7 @@ async function main() {
     let doc = await GeneralSetting.findOne().sort({ 'recordinfo.createat': -1 });
     if (!doc) {
         doc = await GeneralSetting.create({
-            storeName: 'ORINKET',
+            storeName: BRAND.storeName,
             recordinfo: { createby: username },
             storefrontContentJson: JSON.stringify(DEFAULT_CONTENT, null, 2),
         });

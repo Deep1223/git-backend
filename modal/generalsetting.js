@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const mongoose = require('mongoose');
 
 const shopFooterLinkSchema = new mongoose.Schema(
@@ -29,7 +30,7 @@ const heroSlideSchema = new mongoose.Schema(
 );
 
 const generalSettingSchema = new mongoose.Schema({
-    storeName: { type: String, trim: true, default: 'ORINKET' },
+    storeName: { type: String, trim: true, default: BRAND.storeName },
     storeDescription: { type: String, trim: true, default: '' },
     metaTitle: { type: String, trim: true, default: '' },
     metaDescription: { type: String, trim: true, default: '' },
@@ -60,7 +61,7 @@ const generalSettingSchema = new mongoose.Schema({
     showTopBanner: { type: Number, default: 1 },
     showSecondaryBanner: { type: Number, default: 1 },
 
-    brandName: { type: String, trim: true, default: 'ORINKET' },
+    brandName: { type: String, trim: true, default: BRAND.storeName },
     brandDescription: { type: String, trim: true, default: '' },
     footerLogoUrl: { type: String, trim: true, default: '' },
 

@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 /**
  * Seed storefront CMS collections + sidebar menus (MenuMaster + MenuAssignMaster).
  * Run: node scripts/seed-cms-support.js   (from backend/, with MONGO_URI in .env)
@@ -66,10 +67,10 @@ async function seedCmsData() {
     if (!contactExists) {
         await CmsContactPage.create({
             singletonKey: 'main',
-            pageTitle: 'Contact ORINKET',
+            pageTitle: BRAND.contactPageTitle,
             subtitle:
                 'Concierge support for orders, gifting, and styling. Manage this copy in Dashboard → Contact page.',
-            email: 'care@orinket.com',
+            email: BRAND.supportEmail,
             phone: '98765 43210',
             address: '12, Jewel Square, Mumbai, India',
             hours: '24 X 7',
@@ -124,7 +125,7 @@ async function seedCmsData() {
             bullets: [
                 'Free standard shipping on eligible orders.',
                 'Track your order from your account once shipped.',
-                'Questions? Email care@orinket.com with your order ID.',
+                `Questions? Email ${BRAND.supportEmail} with your order ID.`,
             ],
             recordinfo: { createby: 'seed-cms-support', createat: Date.now() },
         });
@@ -136,7 +137,7 @@ async function seedCmsData() {
         await CmsReturnsPage.create({
             singletonKey: 'main',
             title: 'Returns & exchanges',
-            subtitle: 'We want you to love your Orinket pieces.',
+            subtitle: BRAND.loveYourPieces,
             eligible: [
                 'Unused items in original packaging within the return window.',
                 'Manufacturing defects — we will repair or replace where applicable.',
@@ -146,10 +147,10 @@ async function seedCmsData() {
                 'Items marked final sale or customised.',
             ],
             howTo: [
-                'Email care@orinket.com with your order number and photos (if defective).',
+                `Email ${BRAND.supportEmail} with your order number and photos (if defective).`,
                 'Our team will share return instructions and the next steps.',
             ],
-            supportNote: 'Questions? care@orinket.com',
+            supportNote: `Questions? ${BRAND.supportEmail}`,
             refundPolicyUrl: '/legal/refund',
             recordinfo: { createby: 'seed-cms-support', createat: Date.now() },
         });

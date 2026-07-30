@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const img = require('../config/storefrontCloudinaryPlaceholders');
 
 /**
@@ -17,7 +18,7 @@ function getDefaultStorefrontHomeContent() {
             },
         },
         topStylesSection: {
-            title: 'ORINKET TOP STYLES',
+            title: BRAND.topStylesTitle,
             categories: ['ALL', 'NECKLACES', 'BRACELETS', 'EARRINGS', 'RINGS', 'MENS', 'MANGALSUTRA'],
             discount: 30,
             categoryid: '',
@@ -44,7 +45,7 @@ function getDefaultStorefrontHomeContent() {
             eyebrow: 'Shop by Occasion',
             title: 'FOR EVERY YOU',
             description: 'From boardrooms to brunches, we have pieces that complement every version of you.',
-            ornament: '— Orinket —',
+            ornament: BRAND.forEveryYouOrnament,
         },
         fineGoldSection: {
             title: '925 SILVER POST',
@@ -60,7 +61,7 @@ function getDefaultStorefrontHomeContent() {
             title: 'BECAUSE YOU DESERVE TO SHINE',
             image: img.deserve,
             description: [
-                "At Orinket, we create jewellery that's made to be worn every day and on the days that matter most.",
+                BRAND.deserveCopy,
                 "We don't believe in saving the good stuff for later. The sparkle is always yours to keep.",
             ],
             cta: { text: 'OUR STORY', href: '/about' },
@@ -69,11 +70,11 @@ function getDefaultStorefrontHomeContent() {
             title: 'FROM PRIYA, FOR YOU',
             quote: 'A new category called Demi-Fine: premium quality, better pricing, better durability.',
             description:
-                "At Orinket, we're building jewellery in the middle of real gold and imitation, with premium metals and lasting quality.",
+                BRAND.founderCopy,
             name: 'Priya Sharma',
-            role: 'Founder & Creative Director, Orinket',
+            role: BRAND.founderRole,
             image: img.portrait,
-            alt: 'Priya Sharma - Founder of Orinket',
+            alt: BRAND.founderAlt,
         },
         blogSection: {
             title: 'Lab-Grown Diamonds: Styling, Care & Smart Buying',
@@ -86,7 +87,7 @@ function getDefaultStorefrontHomeContent() {
             category: 'Tech',
             subCategory: 'Jewellery Guides',
             tags: ['Lab Grown', 'Diamond', 'Jewellery Care'],
-            authorName: 'Orinket Editorial Team',
+            authorName: BRAND.editorialTeam,
             authorImage: img.portrait,
             sourceReference: '',
             status: 'published',
@@ -125,7 +126,7 @@ function getDefaultStorefrontHomeContent() {
             articleType: 'BlogPosting',
             publishedDate: '2026-03-03T10:00:00.000Z',
             modifiedDate: '2026-03-03T10:00:00.000Z',
-            authorSchema: '{"@type":"Person","name":"Orinket Editorial Team"}',
+            authorSchema: JSON.stringify({ '@type': 'Person', name: BRAND.editorialTeam }),
         },
         shopWithConfidence: {
             title: 'SHOP WITH CONFIDENCE',
@@ -137,11 +138,11 @@ function getDefaultStorefrontHomeContent() {
             ],
         },
         brandStory: {
-            title: 'THE ORINKET STORY',
+            title: BRAND.storyTitle,
             image: img.brandWide,
-            alt: 'The Orinket Story',
+            alt: BRAND.storyAlt,
             description: [
-                'Orinket was born from a belief that everyone deserves beautiful jewellery without compromise.',
+                BRAND.storyCopy,
                 'We noticed a gap in the market - real gold felt expensive and imitation jewellery did not last.',
                 'Today we continue making everyday demi-fine jewellery with premium quality and modern design.',
             ],
@@ -156,7 +157,7 @@ function getDefaultStorefrontHomeContent() {
                     name: 'Ananya Sharma',
                     location: 'Mumbai',
                     rating: 5,
-                    text: 'I absolutely love my Orinket pieces!',
+                    text: BRAND.reviewQuote,
                     product: 'Hearts All Over Bracelet',
                 },
                 {

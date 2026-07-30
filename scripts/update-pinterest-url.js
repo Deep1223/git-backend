@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 require('dotenv').config({ path: './.env' });
 const mongoose = require('mongoose');
 const GeneralSetting = require('../modal/generalsetting');
@@ -16,7 +17,7 @@ const GeneralSetting = require('../modal/generalsetting');
   } else {
     for (const doc of settings) {
       // Set the Pinterest URL
-      doc.pinterestUrl = 'https://www.pinterest.com/orinket_jewellery/';
+      doc.pinterestUrl = BRAND.pinterestUrl;
       // Ensure other fields are as requested (X/Twitter is already handled via UI, but we can ensure it here)
       if (!doc.twitterUrl) doc.twitterUrl = 'https://x.com/';
       

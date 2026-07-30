@@ -40,7 +40,7 @@ const productMasterSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
     },
-    /** Dashboard: which Orinket homepage sections this product is associated with (marketing / merchandising). */
+    /** Dashboard: which homepage sections this product is associated with (marketing / merchandising). */
     storefrontHomeSectionKeys: {
         type: [String],
         default: [],

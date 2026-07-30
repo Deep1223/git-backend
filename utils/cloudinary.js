@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const cloudinary = require('cloudinary').v2;
 const path = require('path');
 
@@ -85,7 +86,7 @@ exports.uploadToCloudinary = async (file, folder = 'temp') => {
  * Cloudinary doesn't strictly need a 'move' operation like S3 for folders, 
  * but rename gives us a clean temp -> permanent workflow.
  */
-exports.moveToPermanentCloudinary = async (url, folder = 'orinket/blog') => {
+exports.moveToPermanentCloudinary = async (url, folder = BRAND.cloudinaryBlog) => {
     ensureConfig();
     if (!url || !isCloudinaryConfigured()) return url;
 

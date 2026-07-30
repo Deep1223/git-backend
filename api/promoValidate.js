@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const SpinLog = require('../modal/spinlog');
 const PromoCode = require('../modal/promocodemaster');
 
@@ -18,7 +19,7 @@ const REWARD_RULES = {
 
 /** Legacy fallback if Mongo has no row (run `node scripts/seed-promo-codes.js` to use DB). */
 const STATIC_PROMOS = [
-    { code: 'ORINKET10', type: 'percent', value: 10, minOrder: 0 },
+    { code: BRAND.promoCode10, type: 'percent', value: 10, minOrder: 0 },
     { code: 'WELCOME15', type: 'percent', value: 15, minOrder: 0 },
     { code: 'FEST500', type: 'fixed', value: 500, minOrder: 2000 },
     { code: 'GOLD100', type: 'fixed', value: 100, minOrder: 500 },

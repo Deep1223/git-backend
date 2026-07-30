@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv-vault');
 const EcomCategory = require('../modal/ecomCategory');
@@ -63,7 +64,7 @@ async function seed() {
         EcomOrder.deleteMany({}),
         EcomAnalytics.deleteMany({}),
         EcomStorefrontSection.deleteMany({}),
-        EcomUser.deleteMany({ email: 'demo.customer@orinket.com' }),
+        EcomUser.deleteMany({ email: BRAND.demoCustomerEmail }),
     ]);
 
     const categories = await EcomCategory.insertMany(
@@ -83,8 +84,8 @@ async function seed() {
         const price = rand(399, 8999);
         const originalPrice = price + rand(100, 2000);
         products.push({
-            name: `Orinket ${categorySlug} Style ${i}`,
-            slug: `orinket-${categorySlug}-${i}`,
+            name: BRAND.productName(categorySlug, i),
+            slug: BRAND.productSlug(categorySlug, i),
             category: category._id,
             price,
             originalPrice,
@@ -105,7 +106,7 @@ async function seed() {
 
     const demoUser = await EcomUser.create({
         name: 'Demo Customer',
-        email: 'demo.customer@orinket.com',
+        email: BRAND.demoCustomerEmail,
         password: 'Demo@1234',
         role: 'customer',
     });

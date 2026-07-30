@@ -9,6 +9,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const dns = require('dns');
 const router = require('./router');
 const errorHandler = require('./middleware/error');
 const { startEcomJobs } = require('./jobs/ecom');
@@ -16,6 +17,9 @@ const webSocketServer = require('./lib/websocketServer');
 
 // Load env vars
 dotenv.config();
+
+// Some home routers refuse SRV lookups (Atlas mongodb+srv) — use public DNS.
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const app = express();
 
@@ -110,7 +114,11 @@ app.get('/health', (req, res) => {
 // Database connection
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/common-project');
+        const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/common-project', {
+            serverSelectionTimeoutMS: 30000,
+            family: 4,
+        });
+        console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
     } catch (err) {
         console.error(`Error: ${err.message}`);
         process.exit(1);

@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 /**
  * Upserts default promo rows into `promo_codes` (same rules as legacy STATIC_PROMOS).
  * After this, manage codes in Mongo (Compass / admin) — storefront validates via POST /api/promo/validate.
@@ -9,7 +10,7 @@ const mongoose = require('mongoose');
 const PromoCode = require('../modal/promocodemaster');
 
 const SEED = [
-    { code: 'ORINKET10', type: 'percent', value: 10, minOrder: 0, description: '10% off your order' },
+    { code: BRAND.promoCode10, type: 'percent', value: 10, minOrder: 0, description: '10% off your order' },
     { code: 'WELCOME15', type: 'percent', value: 15, minOrder: 0, description: '15% off your order' },
     { code: 'FEST500', type: 'fixed', value: 500, minOrder: 2000, description: '₹500 off' },
     { code: 'GOLD100', type: 'fixed', value: 100, minOrder: 500, description: '₹100 off' },

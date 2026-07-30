@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 /**
  * Seed ProductMaster with 150+ products using images from Cloudinary or local folders.
  *
@@ -5,13 +6,13 @@
  *   MONGO_URI
  *   CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
  *
- * Default: scans **project root** folders (same as your ORINKET tree):
+ * Default: scans **project root** folders (same as your project image tree):
  *   bridal/, Earrings/, mans/, Necklaces/, ring/
- *   Uploads each file to Cloudinary under orinket/<folder>/… then seeds DB.
+ *   Uploads each file to Cloudinary under <brand>/<folder>/… then seeds DB.
  *   Products from a folder map to that jewellery category (Rings, Earrings, etc.).
  *
  * If no local images are found, falls back to listing Cloudinary prefixes:
- *   orinket/bridal, orinket/earrings, orinket/mans, orinket/necklaces, orinket/ring
+ *   brand category folders
  *
  * Run:  cd backend && node scripts/seed-productmasters-cloudinary.js
  *
@@ -24,7 +25,7 @@
  *   MIN_PRODUCTS=180
  *   SEED_CREATEBY=Admin Admin
  *   EXTRA_IMAGES_PER_PRODUCT=3
- *   SEED_LOCAL_ROOT=D:\\Orinket   (override project root for image folders)
+ *   SEED_LOCAL_ROOT=<project-root>   (override project root for image folders)
  *   SEED_SKIP_LOCAL=1             (only use Cloudinary API list, no local upload)
  */
 
@@ -38,11 +39,11 @@ const SubCategoryMaster = require('../modal/subcategorymaster');
 const ProductMaster = require('../modal/productmaster');
 
 const FOLDER_PREFIXES = [
-    'orinket/bridal',
-    'orinket/earrings',
-    'orinket/mans',
-    'orinket/necklaces',
-    'orinket/ring',
+    BRAND.categoryFolders[0],
+    BRAND.categoryFolders[1],
+    BRAND.categoryFolders[2],
+    BRAND.categoryFolders[3],
+    BRAND.categoryFolders[4],
 ];
 
 /** Local folder name (under project root) → ProductMaster.category in DB */
@@ -1022,7 +1023,7 @@ function getProfile(subcategoryname, category) {
         bullets: [
             'Quality finish and comfortable wear',
             'Versatile for multiple occasions',
-            'Trusted Orinket craftsmanship',
+            BRAND.craftsmanship,
             'Ideal for gifting',
         ],
     };
@@ -1035,7 +1036,7 @@ function buildDescription(sub, profile, material, plating, adj, epithet) {
 
     const p1 = `This ${adj.toLowerCase()} ${subn.toLowerCase()} — ${epithet.toLowerCase()} — is crafted in ${material} with a ${plating.toLowerCase()} finish. It is designed for ${aud} who want jewellery that feels special yet wearable.`;
 
-    const p2 = `From our ${cat} range at Orinket, this piece balances traditional appeal with clean, modern lines so you can dress it up for celebrations or tone it down for everyday moments.`;
+    const p2 = `From our ${cat} range at ${BRAND.name}, this piece balances traditional appeal with clean, modern lines so you can dress it up for celebrations or tone it down for everyday moments.`;
 
     const p3 = `Each design is finished with attention to comfort, skin-friendly surfaces, and lasting shine — so it stays a favourite in your collection for years.`;
 
@@ -1056,7 +1057,7 @@ function buildProductDetailsFromProfile(profile, material, i) {
 }
 
 function buildDetailsLine(sub, material, weight, dimLine) {
-    return `Orinket ${sub.category} · ${material} · ${weight} · ${dimLine} · Nickel-conscious finishing where applicable.`;
+    return `${BRAND.name} ${sub.category} · ${material} · ${weight} · ${dimLine} · Nickel-conscious finishing where applicable.`;
 }
 
 function configureCloudinary() {
@@ -1121,7 +1122,7 @@ async function uploadFromLocalProjectFolders() {
     for (const { dir, category } of LOCAL_FOLDER_MAP) {
         const abs = path.join(root, dir);
         const names = listImageFilesInDir(abs);
-        const cloudFolder = `orinket/${dir.toLowerCase().replace(/\\/g, '/')}`;
+        const cloudFolder = BRAND.cloudinaryFolder(dir);
         console.log(`  ${dir}/ → ${names.length} image file(s) → Cloudinary folder "${cloudFolder}"`);
 
         for (const name of names) {
@@ -1343,11 +1344,11 @@ async function main() {
     }
 
     if (seeds.length === 0) {
-        console.log('Fetching images from Cloudinary API (orinket/* prefixes)…');
+        console.log('Fetching images from Cloudinary API (<brand>/* prefixes)…');
         const imageUrls = await fetchAllFolderImages();
         if (imageUrls.length === 0) {
             console.error(
-                'No images found. Add files under ORINKET folders (bridal, Earrings, mans, Necklaces, ring) or upload under orinket/* in Cloudinary.'
+                'No images found. Add files under project image folders (bridal, Earrings, mans, Necklaces, ring) or upload under <brand>/* in Cloudinary.'
             );
             process.exit(1);
         }

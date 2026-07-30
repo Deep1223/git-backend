@@ -1,3 +1,4 @@
+const { BRAND } = require('../../config/brand');
 const GeneralSetting = require('../../modal/generalsetting');
 const { parseCms, setRecordInfo } = require('./helpers');
 const { getDef } = require('./definitions');
@@ -21,7 +22,7 @@ async function ensureSettingDoc(username) {
     let doc = await getLatestSetting();
     if (doc) return doc;
     doc = await GeneralSetting.create({
-        storeName: 'ORINKET',
+        storeName: BRAND.storeName,
         recordinfo: { createby: username || 'system' },
         storefrontContentJson: JSON.stringify({}, null, 2),
     });

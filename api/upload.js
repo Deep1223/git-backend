@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const multer = require('multer');
 const path = require('path');
 const { uploadToS3 } = require('../utils/s3');
@@ -60,7 +61,7 @@ exports.uploadImage = async (req, res) => {
         let fileUrl;
 
         if (storageType === 'cloudinary') {
-            fileUrl = await uploadToCloudinary(req.file, 'orinket/temp');
+            fileUrl = await uploadToCloudinary(req.file, BRAND.cloudinaryTemp);
         } else {
             // Default to S3
             fileUrl = await uploadToS3(req.file, 'temp');

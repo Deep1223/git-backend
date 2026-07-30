@@ -1,3 +1,4 @@
+const { BRAND } = require('../../config/brand');
 const EcomOrder = require('../../modal/ecomOrder');
 const EcomCart = require('../../modal/ecomCart');
 const EcomProduct = require('../../modal/ecomProduct');
@@ -238,7 +239,7 @@ exports.dummyCreatePaymentOrder = async (req, res) => {
                 key: process.env.RAZORPAY_KEY_ID || '',
                 amount: Math.round(amount * 100),
                 currency: req.body?.currency || 'INR',
-                name: 'Orinket',
+                name: BRAND.name,
                 description: 'Order payment',
             },
         },

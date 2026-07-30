@@ -1,3 +1,4 @@
+const { BRAND } = require('../config/brand');
 const mongoose = require('mongoose');
 
 const storefrontReviewSchema = new mongoose.Schema(
@@ -40,7 +41,7 @@ const storefrontReviewSchema = new mongoose.Schema(
         source: {
             type: String,
             trim: true,
-            default: 'orinket-web',
+            default: BRAND.reviewSource,
         },
         // 1 = visible (approved/published), 0 = hidden
         status: {
